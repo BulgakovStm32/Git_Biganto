@@ -42,11 +42,11 @@ void microDelay_Init(void){
 	//DWT_CONTROL |= DWT_CTRL_CYCCNTENA_Msk;   // запускаем счётчик
 }
 //**********************************************************
-void microDelay(uint32_t us){
+void microDelay(uint32_t uS){
 
-    uint32_t us_count_tic = us * TACTS_FOR_MICROSEC;// получаем кол-во тактов за 1 мкс и умножаем на наше значение
+    uint32_t uS_count_tic = uS * TACTS_FOR_MICROSEC;// получаем кол-во тактов за 1 мкс и умножаем на наше значение
     DWT->CYCCNT = 0U; // обнуляем счётчик
-    while(DWT->CYCCNT < us_count_tic);
+    while(DWT->CYCCNT < uS_count_tic);
 }
 //*******************************************************************************************
 //*******************************************************************************************

@@ -24,11 +24,11 @@
 //-----------------------------------------------------------------------------
 void     Sys_Init(void);
 
-void     Stm32Flash_Lock     (void);
-void     Stm32Flash_Unlock   (void);
-void     Stm32Flash_ErasePage(uint32_t pageAddress);
-void     Stm32Flash_WriteWord(uint32_t word, uint32_t address);
-uint32_t Stm32Flash_ReadWord (uint32_t address);
+void     STM32_Flash_Lock     (void);
+void     STM32_Flash_Unlock   (void);
+void     STM32_Flash_ErasePage(uint32_t pageAddress);
+void     STM32_Flash_WriteWord(uint32_t word, uint32_t address);
+uint32_t STM32_Flash_ReadWord (uint32_t address);
 //-----------------------------------------------------------------------------
 #endif /*_sys_ST_H*/
 

@@ -16,7 +16,7 @@
 #define DS18B20_SIGN_NEGATIVE   1
 
 //#define DELAY_T_CONVERT      760000
-#define DELAY_RESET_PULSE    500
+//#define DELAY_RESET_PULSE    500
 //#define DELAY_PROTECTION     5
 
 #define DELAY_WRITE_1        5
@@ -58,10 +58,10 @@ typedef enum {
 typedef struct{
 	GPIO_TypeDef		   *GPIO_PORT;
 	uint32_t	  			GPIO_PIN;
-	uint32_t				SENSOR_NUMBER;
-	DS18B20_Resolution_Enum RESOLUTION;
-	uint32_t				TEMPERATURE_SIGN;
-	uint32_t				TEMPERATURE;
+	uint32_t				SensorNumber;	 //SENSOR_NUMBER;
+	DS18B20_Resolution_Enum Resolution;  	 //RESOLUTION;
+	uint32_t				TemperatureSign; //TEMPERATURE_SIGN;
+	uint32_t				Temperature;     //TEMPERATURE;
 }DS18B20_t;
 //*******************************************************************************************
 //*******************************************************************************************

@@ -22,7 +22,7 @@ static uint32_t _i2c_LongWait(I2C_TypeDef *i2c, uint32_t flag){
 	return 0;
 }
 //**********************************************************
-static void _i2c_GPIO_Init(I2C_TypeDef *i2c, uint32_t remap){
+static void _i2c_GPIO_Init(I2C_TypeDef *const i2c, uint32_t remap){
 
 	RCC->APB2ENR |= RCC_APB2ENR_IOPBEN;//Включаем тактирование GPIOB
 	//Тактирование I2C_1
@@ -194,13 +194,13 @@ void I2C_Write(I2C_TypeDef *i2c, uint8_t deviceAddr, uint8_t regAddr, uint8_t *p
 	//Формирование Start condition.
 	i2c->CR1 |= I2C_CR1_START;
 	if(_i2c_LongWait(i2c, I2C_SR1_SB)) return;//Ожидание формирования Start condition.
-	(void)i2c->SR1;				      		 //Для сброса флага SB необходимо прочитать SR1
+	(void)i2c->SR1;				      		  //Для сброса флага SB необходимо прочитать SR1
 
 	//Передаем адрес slave + Запись.
 	i2c->DR = deviceAddr | I2C_MODE_WRITE;
 	if(_i2c_LongWait(i2c, I2C_SR1_ADDR)) return;//Ожидаем окончания передачи адреса
-	(void)i2c->SR1;				        	   //сбрасываем бит ADDR (чтением SR1 и SR2):
-	(void)i2c->SR2;				        	   //
+	(void)i2c->SR1;				        	    //сбрасываем бит ADDR (чтением SR1 и SR2):
+	(void)i2c->SR2;				        	    //
 
 	//Передача адреса в который хотим записать.
 	i2c->DR = regAddr;
@@ -286,8 +286,8 @@ void I2C_IT_Init(I2C_TypeDef *i2c, uint32_t remap){
 
 	I2C_Init(i2c, remap);
 	//Инит-я прерывания.
-	i2c->CR2 |= I2C_CR2_ITEVTEN | //Разрешение прерывания по событию.
-				I2C_CR2_ITERREN;  //Разрешение прерывания по ошибкам.
+	i2c->CR2 |= I2C_CR2_ITEVTEN |      //Разрешение прерывания по событию.
+				I2C_CR2_ITERREN;       //Разрешение прерывания по ошибкам.
 
 	NVIC_SetPriority(I2C1_EV_IRQn, 15);//Приоритет прерывания.
 	NVIC_SetPriority(I2C1_ER_IRQn, 15);//Приоритет прерывания.
@@ -357,8 +357,10 @@ void I2C_IT_Slave_StartTx(uint8_t *pTxBuf, uint32_t len){
 //Обработчик прерывания событий I2C
 void I2C1_EV_IRQHandler(void){
 
-	static uint32_t txCount = 0;
-	static uint32_t rxCount = 0;
+//	volatile uint32_t sr1 = I2C1->SR1; //при чтении рагистров SR1 и SR2 происходит сброс флаго
+//	volatile uint32_t sr2 = I2C1->SR2;
+	static   uint32_t txCount = 0;
+	static   uint32_t rxCount = 0;
 	//LedPC13Toggel();
 	//------------------------------
 	//Сформирована START последоательность.
@@ -409,7 +411,8 @@ void I2C1_EV_IRQHandler(void){
 		{
 			I2C1->DR = *(ptrTxBuf + txCount);
 			txCount++;
-			if(txCount >= TxBufSize)txCount = 0;
+
+			//if(txCount >= TxBufSize)txCount = 0;
 		}
 		//Master
 		else
@@ -452,6 +455,7 @@ void I2C1_EV_IRQHandler(void){
 		(void)I2C1->SR1; 		   //сбрасываем бит STOPF
 		I2C1->CR1 &= ~I2C_CR1_STOP;//
 	}
+	//------------------------------
 }
 //**********************************************************
 //Обработчик прерывания ошибок I2C

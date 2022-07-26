@@ -4,8 +4,11 @@
  *  Created on: 22.07.2022
  *  Autho     : Беляев А.А.
  *
+ *
  *	Описание  : MCUv7
-
+ *
+ *	Последнее редактирование: 22.07.2022
+ *
  */
 //*******************************************************************************************
 //*******************************************************************************************
@@ -14,37 +17,12 @@
 
 //*******************************************************************************************
 //*******************************************************************************************
-typedef struct{
-	uint8_t hour;
-	uint8_t min;
-	uint8_t sec;
-}Time_t;
-
-static Time_t Time;
-//---------------------------
 DS18B20_t Sensor_1;
 DS18B20_t Sensor_2;
 DS18B20_t Sensor_3;
 
 //*******************************************************************************************
 //*******************************************************************************************
-void IncrementOnEachPass(uint32_t *var, uint16_t event){
-
-		   uint16_t riseReg  = 0;
-	static uint16_t oldState = 0;
-	//-------------------
-	riseReg  = (oldState ^ event) & event;
-	oldState = event;
-	if(riseReg) (*var)++;
-}
-//************************************************************
-void Time_Calculation(uint32_t count){
-
-	Time.hour =  count / 3600;
-	Time.min  = (count % 3600) / 60;
-	Time.sec  =  count % 60;
-}
-//************************************************************
 uint32_t Led_Blink(uint32_t millis, uint32_t period, uint32_t switch_on_time){
 
 	static uint32_t millisOld = 0;
@@ -57,6 +35,9 @@ uint32_t Led_Blink(uint32_t millis, uint32_t period, uint32_t switch_on_time){
 	}
 	return flag;
 }
+//************************************************************
+
+
 //*******************************************************************************************
 //*******************************************************************************************
 //Запросы для отлаживания STM32 I2C в режиме Slave.
@@ -85,17 +66,17 @@ void Task_Temperature_Read(void){
 	TemperatureSens_ReadTemperature(&Sensor_2);
 	TemperatureSens_ReadTemperature(&Sensor_3);
 
-	txBuf[0] = (uint8_t) Sensor_1.TEMPERATURE_SIGN;
-	txBuf[1] = (uint8_t)(Sensor_1.TEMPERATURE >> 8);
-	txBuf[2] = (uint8_t) Sensor_1.TEMPERATURE;
+	txBuf[0] = (uint8_t) Sensor_1.TemperatureSign;
+	txBuf[1] = (uint8_t)(Sensor_1.Temperature >> 8);
+	txBuf[2] = (uint8_t) Sensor_1.Temperature;
 
-	txBuf[3] = (uint8_t) Sensor_2.TEMPERATURE_SIGN;
-	txBuf[4] = (uint8_t)(Sensor_2.TEMPERATURE >> 8);
-	txBuf[5] = (uint8_t) Sensor_2.TEMPERATURE;
+	txBuf[3] = (uint8_t) Sensor_2.TemperatureSign;
+	txBuf[4] = (uint8_t)(Sensor_2.Temperature >> 8);
+	txBuf[5] = (uint8_t) Sensor_2.Temperature;
 
-	txBuf[6] = (uint8_t) Sensor_3.TEMPERATURE_SIGN;
-	txBuf[7] = (uint8_t)(Sensor_3.TEMPERATURE >> 8);
-	txBuf[8] = (uint8_t) Sensor_3.TEMPERATURE;
+	txBuf[6] = (uint8_t) Sensor_3.TemperatureSign;
+	txBuf[7] = (uint8_t)(Sensor_3.Temperature >> 8);
+	txBuf[8] = (uint8_t) Sensor_3.Temperature;
 
 	txBuf[9] = 0xC9;
 }
@@ -116,26 +97,26 @@ int main(void){
 					   //Без задержки LCD-дисплей не работает.
 	//***********************************************
 	//Ини-я DS18B20
-	Sensor_1.SENSOR_NUMBER = 1;
-	Sensor_1.GPIO_PORT     = GPIOA;
-	Sensor_1.GPIO_PIN      = 1;
-	Sensor_1.RESOLUTION    = DS18B20_Resolution_12_bit;
+	Sensor_1.SensorNumber = 1;
+	Sensor_1.GPIO_PORT    = GPIOA;
+	Sensor_1.GPIO_PIN     = 1;
+	Sensor_1.Resolution   = DS18B20_Resolution_12_bit;
 	TemperatureSens_GpioInit(&Sensor_1);
 	TemperatureSens_SetResolution(&Sensor_1);
 	TemperatureSens_StartConvertTemperature(&Sensor_1);
 
-	Sensor_2.SENSOR_NUMBER = 2;
-	Sensor_2.GPIO_PORT     = GPIOA;
-	Sensor_2.GPIO_PIN      = 2;
-	Sensor_2.RESOLUTION    = DS18B20_Resolution_12_bit;
+	Sensor_2.SensorNumber = 2;
+	Sensor_2.GPIO_PORT    = GPIOA;
+	Sensor_2.GPIO_PIN     = 2;
+	Sensor_2.Resolution   = DS18B20_Resolution_12_bit;
 	TemperatureSens_GpioInit(&Sensor_2);
 	TemperatureSens_SetResolution(&Sensor_2);
 	TemperatureSens_StartConvertTemperature(&Sensor_2);
 
-	Sensor_3.SENSOR_NUMBER = 3;
-	Sensor_3.GPIO_PORT     = GPIOA;
-	Sensor_3.GPIO_PIN      = 3;
-	Sensor_3.RESOLUTION    = DS18B20_Resolution_12_bit;
+	Sensor_3.SensorNumber = 3;
+	Sensor_3.GPIO_PORT    = GPIOA;
+	Sensor_3.GPIO_PIN     = 3;
+	Sensor_3.Resolution   = DS18B20_Resolution_12_bit;
 	TemperatureSens_GpioInit(&Sensor_3);
 	TemperatureSens_SetResolution(&Sensor_3);
 	TemperatureSens_StartConvertTemperature(&Sensor_3);
@@ -173,10 +154,6 @@ int main(void){
 //*******************************************************************************************
 //Прерывание каждую милисекунду.
 void SysTick_Handler(void){
-
-	static uint32_t secCounter = 0;
-	IncrementOnEachPass(&secCounter, Blink(INTERVAL_500_mS));//Инкримент счетчика секунд.
-	Time_Calculation(secCounter);						     //Преобразование времени
 
 	RTOS_TimerServiceLoop();
 	msDelay_Loop();

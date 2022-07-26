@@ -12,8 +12,10 @@
 
 //*******************************************************************************************
 //*******************************************************************************************
+//*******************************************************************************************
+//*******************************************************************************************
 //Функция задержки в микросекундах.
-__STATIC_INLINE void OneWire_usDelay(const uint32_t us){
+__STATIC_INLINE void _OneWire_usDelay(uint32_t us){
 
 	microDelay(us);
 
@@ -22,89 +24,104 @@ __STATIC_INLINE void OneWire_usDelay(const uint32_t us){
 //	while(us--);
 }
 //**********************************************************
-static void OneWire_GpioInit(const DS18B20_t *sensor){
+static void _OneWire_GpioInit(GPIO_TypeDef *const port, uint32_t pin){
 
-	uint32_t pin = sensor->GPIO_PIN;
-	//---------------------
 	//Включение тактирования портов.
-		 if(sensor->GPIO_PORT == GPIOA) RCC->APB2ENR |= RCC_APB2ENR_IOPAEN;
-	else if(sensor->GPIO_PORT == GPIOB) RCC->APB2ENR |= RCC_APB2ENR_IOPBEN;
-	else if(sensor->GPIO_PORT == GPIOC) RCC->APB2ENR |= RCC_APB2ENR_IOPCEN;
+		 if(port == GPIOA) RCC->APB2ENR |= RCC_APB2ENR_IOPAEN;
+	else if(port == GPIOB) RCC->APB2ENR |= RCC_APB2ENR_IOPBEN;
+	else if(port == GPIOC) RCC->APB2ENR |= RCC_APB2ENR_IOPCEN;
 	else return;
 	//Конфигурация выводы в режим 50MHz output open-drain.
-	if(sensor->GPIO_PIN <= 7)
+	if(pin <= 7)
 	{
 		pin = pin * 4;
-		sensor->GPIO_PORT->CRL |=  (0X03 << pin);          //MODEy[1:0] - 11: Output mode, max speed 50 MHz
-		sensor->GPIO_PORT->CRL |=  (0X01 << (0X02 << pin));//CNFy[1:0]  - 01: General purpose output Open-drain
-		sensor->GPIO_PORT->CRL &= ~(0x02 << (0x02 << pin));//
+		port->CRL |=  (0X03 << pin) |         //MODEy[1:0] - 11: Output mode, max speed 50 MHz
+					  (0X01 << (0X02 << pin));//CNFy[1:0]  - 01: General purpose output Open-drain
+		port->CRL &= ~(0x02 << (0x02 << pin));//
 	}
 	else
 	{
 		pin = (pin - 8) * 4;
-		sensor->GPIO_PORT->CRH |=  (0x03 << pin);          //MODEy[1:0] - 11: Output mode, max speed 50 MHz
-		sensor->GPIO_PORT->CRH |=  (0x01 << (0x02 << pin));//CNFy[1:0]  - 01: General purpose output Open-drain
-		sensor->GPIO_PORT->CRH &= ~(0x02 << (0x02 << pin));//
+		port->CRH |=  (0x03 << pin) |         //MODEy[1:0] - 11: Output mode, max speed 50 MHz
+					  (0x01 << (0x02 << pin));//CNFy[1:0]  - 01: General purpose output Open-drain
+		port->CRH &= ~(0x02 << (0x02 << pin));//
 	}
 }
 //**********************************************************
-static uint8_t OneWire_Reset(const DS18B20_t *sensor){
+//Процедура инициализации: импульсы сброса и присутствия
+static uint32_t _OneWire_Initialization(GPIO_TypeDef *const port, uint32_t pin){
 
-  uint16_t status = 0;
-  uint32_t pin    = (1 << sensor->GPIO_PIN);
+  uint32_t status = 0;
+  pin = (1 << pin);
   //---------------------
   //низкий уровень
-  sensor->GPIO_PORT->ODR &= ~pin;
-  OneWire_usDelay(480);//задержка как минимум на 480 микросекунд
+  port->ODR &= ~pin;
+  _OneWire_usDelay(480);//задержка как минимум на 480 микросекунд
   //высокий уровень
-  sensor->GPIO_PORT->ODR |= pin;
-  OneWire_usDelay(60); //задержка как минимум на 60 микросекунд
-  //проверяем уровень
-  status = (sensor->GPIO_PORT->IDR & pin);
-  OneWire_usDelay(DELAY_RESET_PULSE / 2);//на всякий случай подождём, так как могут быть неточности в задержке.
+  port->ODR |= pin;
+  _OneWire_usDelay(60); //задержка как минимум на 60 микросекунд
+  //проверяем сигнал присутствия.
+  status = (port->IDR & pin);
+  _OneWire_usDelay(250);//подождём, так как могут быть неточности в задержке.
   return status;
 }
 //**********************************************************
-static void OneWire_WriteBit(const DS18B20_t *sensor, uint8_t bit){
+//Запись бита на шину
+static void _OneWire_WriteBit(GPIO_TypeDef *const port, uint32_t pin, uint32_t bit){
 
-	uint32_t pin = (1 << sensor->GPIO_PIN);
+	pin = (1 << pin);
 	//---------------------
 	//низкий уровень
-	sensor->GPIO_PORT->ODR &= ~pin;
-	if(bit) OneWire_usDelay(DELAY_WRITE_1);
-	else    OneWire_usDelay(DELAY_WRITE_0);
-
+	port->ODR &= ~pin;
+	if(bit) _OneWire_usDelay(DELAY_WRITE_1);
+	else    _OneWire_usDelay(DELAY_WRITE_0);
 	//высокий уровень
-	sensor->GPIO_PORT->ODR |= pin;
-	if(bit) OneWire_usDelay(DELAY_WRITE_1_PAUSE);
-	else    OneWire_usDelay(DELAY_WRITE_0_PAUSE);
+	port->ODR |= pin;
+	if(bit) _OneWire_usDelay(DELAY_WRITE_1_PAUSE);
+	else    _OneWire_usDelay(DELAY_WRITE_0_PAUSE);
 }
 //**********************************************************
-static void OneWire_WriteByte(const DS18B20_t *sensor, uint8_t data){
+//Запись байта на шину
+static void _OneWire_WriteByte(GPIO_TypeDef *const port, uint32_t pin, uint32_t data){
 
-	for(uint8_t i = 0; i < 8; i++)
+	for(uint32_t i = 0; i < 8; i++)
 	{
-		OneWire_WriteBit(sensor, ((data >> i) & 0x01));
+		_OneWire_WriteBit(port, pin, ((data >> i) & 0x00000001));
 	}
 }
 //**********************************************************
-static uint8_t OneWire_ReadBit(const DS18B20_t *sensor){
+//Чтение бита.
+static uint32_t _OneWire_ReadBit(GPIO_TypeDef *const port, uint32_t pin){
 
-	uint8_t  bit = 0;
-	uint32_t pin = (1 << sensor->GPIO_PIN);
+	uint32_t bit = 0;
+	pin = (1 << pin);
 	//---------------------
 	//шину к земле.
-	sensor->GPIO_PORT->ODR &= ~pin;
-	OneWire_usDelay(DELAY_READ_SLOT);
+	port->ODR &= ~pin;
+	_OneWire_usDelay(DELAY_READ_SLOT);
 	//отпустили шину.
-	sensor->GPIO_PORT->ODR |= pin;
-	OneWire_usDelay(DELAY_BUS_RELAX);
+	port->ODR |= pin;
+	_OneWire_usDelay(DELAY_BUS_RELAX);
 	//Чтение состояния линии
-	if(sensor->GPIO_PORT->IDR & pin) bit = 1;
-	OneWire_usDelay(DELAY_READ_PAUSE);
+	if(port->IDR & pin) bit = 1;
+	_OneWire_usDelay(DELAY_READ_PAUSE);
 
 	return bit;
 }
+//**********************************************************
+//Чтение нужного количества бит
+static uint32_t _OneWire_ReadData(GPIO_TypeDef *const port, uint32_t pin, uint32_t numBit){
+
+	uint32_t data = 0;
+	//---------------------
+	for(uint32_t i = 0; i < numBit; i++)
+	{
+		data |= _OneWire_ReadBit(port, pin) << i;
+	}
+	return data;
+}
+//*******************************************************************************************
+//*******************************************************************************************
 //*******************************************************************************************
 //*******************************************************************************************
 //static uint8_t DS18B20_GetDevider(DS18B20_t *sensor){
@@ -124,22 +141,24 @@ static void DS18B20_ReadTemperature(DS18B20_t *sensor){
 	//---------------------
 	__disable_irq();
 
-	for(uint8_t i = 0; i < 16; i++)
-	{
-		data |= (uint32_t)(OneWire_ReadBit(sensor) << i);
-	}
+	//Чтение 16 бит из DS18B20
+//	for(uint32_t i = 0; i < 16; i++)
+//	{
+//		data |= (uint32_t)(_OneWire_ReadBit(sensor->GPIO_PORT, sensor->GPIO_PIN) << i);
+//	}
+	data = _OneWire_ReadData(sensor->GPIO_PORT, sensor->GPIO_PIN, 16);
 	//Отрицательная температура.
 	if(data & 0x0000F800)
 	{
-		sensor->TEMPERATURE_SIGN = DS18B20_SIGN_NEGATIVE;
+		sensor->TemperatureSign = DS18B20_SIGN_NEGATIVE;
 		data  = (data ^ 0x0000FFFF) + 1;
 		data &= 0x00000FFF;//Маска для выделения 12 бит.
 	}
-	else sensor->TEMPERATURE_SIGN = DS18B20_SIGN_POSITIVE;
+	else sensor->TemperatureSign = DS18B20_SIGN_POSITIVE;
 
 	__enable_irq();
 	//Расчет температуры
-	sensor->TEMPERATURE = (uint32_t)(((data * 625) + 500) / 1000);
+	sensor->Temperature = (uint32_t)(((data * 625) + 500) / 1000);
 }
 //**********************************************************
 /*! \brief  Sends the SEARCH ROM command and returns 1 id found on the
@@ -257,38 +276,48 @@ static void DS18B20_ReadTemperature(DS18B20_t *sensor){
 //*******************************************************************************************
 void TemperatureSens_GpioInit(DS18B20_t *sensor){
 
-	OneWire_GpioInit(sensor);
+	_OneWire_GpioInit(sensor->GPIO_PORT, sensor->GPIO_PIN);
 }
 //**********************************************************
 void TemperatureSens_SetResolution(DS18B20_t *sensor){
 
-	OneWire_Reset(sensor);//reset();
-	OneWire_WriteByte(sensor, SKIP_ROM);
-	OneWire_WriteByte(sensor, WRITE_SCRATCHPAD);
-	OneWire_WriteByte(sensor, TH_REGISTER);
-	OneWire_WriteByte(sensor, TL_REGISTER);
-	OneWire_WriteByte(sensor, sensor->RESOLUTION);
+	uint32_t      pin  = sensor->GPIO_PIN;
+	GPIO_TypeDef *port = sensor->GPIO_PORT;
+	//---------------------
+	_OneWire_Initialization(port, pin);
+	_OneWire_WriteByte(port, pin, SKIP_ROM);
+	_OneWire_WriteByte(port, pin, WRITE_SCRATCHPAD);
+	_OneWire_WriteByte(port, pin, TH_REGISTER);
+	_OneWire_WriteByte(port, pin, TL_REGISTER);
+	_OneWire_WriteByte(port, pin, sensor->Resolution);
 	//DELAY_WAIT_CONVERT = DELAY_T_CONVERT / DS18B20_GetDevider(sensor);
 }
 //**********************************************************
 void TemperatureSens_StartConvertTemperature(DS18B20_t *sensor){
 
-	if(OneWire_Reset(sensor)) return;
-	OneWire_WriteByte(sensor, SKIP_ROM);
-	OneWire_WriteByte(sensor, CONVERT_T);
+	uint32_t      pin  = sensor->GPIO_PIN;
+	GPIO_TypeDef *port = sensor->GPIO_PORT;
+	//---------------------
+	if(_OneWire_Initialization(port, pin)) return;
+	_OneWire_WriteByte(port, pin, SKIP_ROM);
+	_OneWire_WriteByte(port, pin, CONVERT_T);
 }
 //**********************************************************
 void TemperatureSens_ReadTemperature(DS18B20_t *sensor){
 
-	if(!sensor->GPIO_PORT) return;
+	uint32_t      pin  = sensor->GPIO_PIN;
+	GPIO_TypeDef *port = sensor->GPIO_PORT;
+	//---------------------
+	if(!port) return;	//Проверка. Не опрделен порт - значит нет датчика. Выходим.
 
-	if(OneWire_Reset(sensor))
+	if(_OneWire_Initialization(port, pin)) //Нет сигнала присутсвия на шине - выходим.
 	{
-		sensor->TEMPERATURE = 0;
+		sensor->Temperature = 0;
 		return;
 	}
-	OneWire_WriteByte(sensor, SKIP_ROM);
-	OneWire_WriteByte(sensor, READ_SCRATCHPAD);
+
+	_OneWire_WriteByte(port, pin, SKIP_ROM);
+	_OneWire_WriteByte(port, pin, READ_SCRATCHPAD);
 	DS18B20_ReadTemperature(sensor);
 
 	TemperatureSens_StartConvertTemperature(sensor);
@@ -296,12 +325,12 @@ void TemperatureSens_ReadTemperature(DS18B20_t *sensor){
 //**********************************************************
 uint32_t TemperatureSens_Sign(DS18B20_t *sensor){
 
-	return sensor->TEMPERATURE_SIGN;
+	return sensor->TemperatureSign;
 }
 //**********************************************************
 uint32_t TemperatureSens_Temperature(DS18B20_t *sensor){
 
-	return sensor->TEMPERATURE;
+	return sensor->Temperature;
 }
 //*******************************************************************************************
 //*******************************************************************************************
