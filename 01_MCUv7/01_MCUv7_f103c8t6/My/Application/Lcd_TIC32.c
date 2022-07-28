@@ -65,7 +65,7 @@ static uint8_t Tic32Buf[2] = {0};
 //Инициализация PCF8531
 void Lcd_TIC32_Init(void){
 
-	I2C_Init(LCD_TIC32_I2C, 0);
+	I2C_Master_Init(LCD_TIC32_I2C, I2C_GPIO_NOREMAP);//I2C_Init(LCD_TIC32_I2C, 0);
 	//-------------------------
 	I2C_StartAndSendDeviceAddr(LCD_TIC32_I2C, LCD_TIC32_ADDR);
 	//на основн стр
@@ -124,8 +124,6 @@ void Lcd_TIC32_Init(void){
 	Tic32Buf[0] = LCD_TIC32_CON1;
 	Tic32Buf[1] = (1 << 7) | LCD_TIC32_Vlcd;
 	I2C_SendData(LCD_TIC32_I2C, Tic32Buf, 2);
-
-	I2C_Stop(LCD_TIC32_I2C);
 }
 //************************************************************
 //Очистка ОЗУ драйвера

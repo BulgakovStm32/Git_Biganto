@@ -8,7 +8,11 @@
 
 Все транзакции используют протокол SMBus Block Write - Block Read Process Call:
 
-S Addr+Wr[A] Comm[A] Count[A] Data1[A] Data2[A] ... DataN[A] aPEC[A] Sr Addr+Rd[A] [Count]A [Data1]A [Data2]A ... [DataN]A [PEC]N P
+S Addr+Wr[A] Comm[A] Count[A] Data1[A] Data2[A] ... DataN[A]-------|
+															       |
+		|----------------------------------------------------------|
+		|
+		|---->Sr Addr+Rd[A] [Count]A [Data1]A [Data2]A ... [DataN]A [PEC]NA P
 
 =============  ===============================================
 S     (1 бит)  Старт бит
@@ -71,6 +75,7 @@ GetStatusAndFlagReg             0x21  W1R5    Получить текущее с
 ResetError                      0x22  W1R1    Сбросить ошибки API
 PeripheralsPowerCtl             0x27  W2R1    Управление питанием переферии
 TurnOffPower                    0x28  W5R1    Выключить питание
+
 GetSystemCtrlReg                0x32  W1R5    Чтение системного регистра управления
 GetTemperature                  0x34  W2R5    Получение значения от датчика температуры
 CheckSensors                    0x35  W1R1    Наличие температурных датчиков

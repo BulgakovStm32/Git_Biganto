@@ -28,7 +28,6 @@ void AHT10_SoftReset(void){
 	//-------------------
 	I2C_StartAndSendDeviceAddr(I2C2, AHT10_ADDR);
 	I2C_SendData(I2C2, &cmd, 1);
-	I2C_Stop(I2C2);
 
 	msDelay(50);
 }
@@ -47,14 +46,12 @@ void AHT10_ReadData(void){
 	//-------------------
 	I2C_StartAndSendDeviceAddr(I2C2, AHT10_ADDR);
 	I2C_SendData(I2C2, &cmd, 1);
-	I2C_Stop(I2C2);
 
 	//msDelay(100);
 	//msDelay(10);
 
 	I2C_StartAndSendDeviceAddr(I2C2, (AHT10_ADDR | 0x01));
 	I2C_ReadData(I2C2, rxBuf, 6);
-	//I2C_Stop(I2C2);
 
 	//Расчет влажности
 	AHT10_ADC_Raw   = (rxBuf[1] << 16) | (rxBuf[2] << 8) | (rxBuf[3] & 0xF0);

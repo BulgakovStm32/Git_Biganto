@@ -14,7 +14,7 @@
 //*******************************************************************************************
 void DS2782_Init(I2C_TypeDef *i2c){
 
-	I2C_Init(i2c, 0);
+	I2C_Master_Init(i2c, I2C_GPIO_NOREMAP); //Init(i2c, 0);
 }
 //************************************************************
 uint16_t DS2782_ReadADC(DS2782_Registers_t addrReg, uint8_t len){
@@ -26,7 +26,7 @@ uint16_t DS2782_ReadADC(DS2782_Registers_t addrReg, uint8_t len){
 //	I2C_SendData(DS2782_I2C, &regAddr, 1);
 //	I2C_Stop(DS2782_I2C);
 	//-------------------
-	I2C_Read(DS2782_I2C, DS2782_ADDR, (uint8_t)addrReg, rxBuf, len);
+	I2C_Master_Read(DS2782_I2C, DS2782_ADDR, (uint8_t)addrReg, rxBuf, len);
 	return((rxBuf[1] << 8) | rxBuf[0]);
 }
 //************************************************************

@@ -25,8 +25,6 @@ static void lcd_send_tetrad(uint8_t byte, uint8_t type){
 
 	temp &= ~(LCD_E); 
 	I2C_SendData(LCD_I2C, &temp, 1);
-
-	I2C_Stop(LCD_I2C);
 }
 //***************************************************************
 static void lcd_send(uint8_t byte, uint8_t type){
