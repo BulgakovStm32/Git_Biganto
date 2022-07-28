@@ -131,6 +131,7 @@ int main(void){
 	I2cWire.slaveAddr	 = 0x05;
 	I2cWire.pTxBuf  	 = slaveTxBuf;
 	I2cWire.pRxBuf  	 = slaveRxBuf;
+	I2cWire.rxBufSize	 = 4;
 	I2C_IT_Slave_Init(&I2cWire);
 	//***********************************************
 	//Ининциализация SPI для работы с энкодером.

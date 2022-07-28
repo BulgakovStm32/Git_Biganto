@@ -399,7 +399,7 @@ void I2C_IT_EV_Handler(I2C_IT_t *i2cIt){
 	{
 		(void)i2c->SR1;				         //Для сброса флага SB необходимо прочитать SR1
 		i2c->DR = i2cIt->slaveAddr | I2C_MODE_WRITE;//Передаем адрес slave + Запись.
-		return;
+		//return;
 	}
 	//------------------------------
 	//Окончание приема/передачи адреса.
@@ -424,13 +424,13 @@ void I2C_IT_EV_Handler(I2C_IT_t *i2cIt){
 				i2cIt->txBufIndex = 1;
 			}
 			//От Мастера пришла команда на запись.
-			else
-			{
-				*(i2cIt->pRxBuf + 0) = i2c->DR; //Сохранили первый байт
-				i2cIt->txBufIndex++;
-			}
+//			else
+//			{
+//				*(i2cIt->pRxBuf + 0) = i2c->DR; //Сохранили первый байт
+//				i2cIt->rxBufIndex = 1;
+//			}
 		}
-		return;
+		//return;
 	}
 	//------------------------------
 	//Передающий буфер свободен.
@@ -461,7 +461,7 @@ void I2C_IT_EV_Handler(I2C_IT_t *i2cIt){
 			i2c->DR = *(i2cIt->pTxBuf + i2cIt->txBufIndex);
 			i2cIt->txBufIndex++;
 		}
-		return;
+		//return;
 	}
 	//------------------------------
 	//Принят байт.
@@ -474,9 +474,10 @@ void I2C_IT_EV_Handler(I2C_IT_t *i2cIt){
 		}
 		else
 		{
+			i2cIt->i2cItState = 0;
 			i2cIt->rxBufIndex = 0;
 		}
-		return;
+		//return;
 	}
 	//------------------------------
 	//STOP
