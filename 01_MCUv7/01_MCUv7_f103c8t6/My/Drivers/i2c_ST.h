@@ -16,8 +16,7 @@
 #define I2C_TRISE       300		 //значение в нС
 #define APB1_CLK		36000000 //Частота шины APB1 в Гц
 
-#define I2C_GPIO_NOREMAP	0
-#define I2C_GPIO_REMAP		1
+
 
 //#define I2C_CR2_VALUE   (APB1_CLK / 1000000)
 //#define I2C_CCR_VALUE	((APB1_CLK / I2C_BAUD_RATE) / 2)
@@ -28,6 +27,9 @@
 #define I2C_MODE_WRITE 			0
 #define I2C_ADDRESS(addr, mode) ((addr<<1) | mode)
 //--------------------------
+#define I2C_GPIO_NOREMAP	0
+#define I2C_GPIO_REMAP		1
+
 #define I2C_MODE_MASTER	0
 #define I2C_MODE_SLAVE	1
 
@@ -62,8 +64,7 @@ I2C_State_t I2C_Master_Read (I2C_TypeDef *i2c, uint32_t deviceAddr, uint32_t reg
 
 //************************************
 //Функции для работы в режиме Slave
-void I2C_Slave_Init(I2C_TypeDef *i2c, uint32_t slaveAddr, uint32_t remap);
-//void I2C_Slave_Read(I2C_TypeDef *i2c, uint8_t regAddr, uint8_t *pBuf, uint16_t len);
+void I2C_Slave_Init(I2C_TypeDef *i2c, uint32_t remap, uint32_t slaveAddr);
 
 //*******************************************************************************************
 //*******************************************************************************************
@@ -71,41 +72,41 @@ void I2C_Slave_Init(I2C_TypeDef *i2c, uint32_t slaveAddr, uint32_t remap);
 
 
 //--------------------------
+//Структура контекста для работы с портом I2C по прерываниям.
 typedef struct{
 	I2C_TypeDef *i2c;
-	uint32_t 	i2cGpioRemap;	//
+	uint32_t 	i2cMode;		// Master или Slave
+	uint32_t 	i2cGpioRemap;	// Ремап выводов для I2C1, для I2C2 ремапа нет.
 	uint32_t 	i2cItState;		//
+	uint32_t 	i2cDmaState;	//
 
-	uint32_t 	slaveAddr;		//
-	uint32_t 	slaveRegAddr;	//
+	uint32_t 	slaveAddr;		// В режиме Master - адрес Slave-устройства к которому идет обращение,
+								// в режиме Slave  - адрес устройста на шине.
 
-	uint8_t 	*pTxBuf;		//
-	uint32_t 	txBufSize;		//
-	uint32_t	txBufIndex;		//
+	uint32_t 	slaveRegAddr;	// В режиме Master - адрес регистра Slave-устройства куда хотим писать/читать данные.
+								// в режиме Slave  - ???
 
-	uint8_t 	*pRxBuf;		//
-	uint32_t 	rxBufSize;		//
-	uint32_t	rxBufIndex;		//
+	uint8_t 	*pTxBuf;		// указатель на буфер передачи.
+	uint32_t 	txBufSize;		// размер буфера передачи
+	uint32_t	txBufIndex;		// индекс буфера передачи.
+
+	uint8_t 	*pRxBuf;		// указатель на буфер приема.
+	uint32_t 	rxBufSize;		// размер буфера приема.
+	uint32_t	rxBufIndex;		// индекс буфера приема.
+
+	void(*i2cRxCallback)(void);
+	void(*i2cTxCallback)(void);
+
 }I2C_IT_t;
 //--------------------------
 
 //*******************************************************************************************
-//Функции для работы в режиме Master
-void 	I2C_IT_Master_Init(I2C_TypeDef *i2c, uint32_t remap);
-//void 	I2C_IT_Master_StartTx(I2C_TypeDef *i2c, uint8_t deviceAddr, uint8_t regAddr, uint8_t *pBuf, uint32_t len);
-//void 	I2C_IT_Master_StartRx(I2C_TypeDef *i2c, uint8_t deviceAddr, uint8_t regAddr, uint8_t *pBuf, uint32_t len);
-//uint8_t I2C_IT_Master_GetState(void);
-//uint32_t I2C_IT_Master_GetState(I2C_IT_t *i2cIt);
-
-//Функции для работы в режиме Slave
-void I2C_IT_Slave_Init(I2C_IT_t *i2c);
-
-//void I2C_IT_Slave_StartRx(uint8_t *pRxBuf, uint32_t len);
-//void I2C_IT_Slave_StartTx(uint8_t *pTxBuf, uint32_t len);
+void I2C_IT_Init(I2C_IT_t *i2c);
 
 //Обработчики прерывания
 void I2C_IT_EV_Handler(I2C_IT_t *i2cIt); //Обработчик прерывания событий I2C
 void I2C_IT_ER_Handler(I2C_IT_t *i2cIt); //Обработчик прерывания ошибок I2C
+
 //*******************************************************************************************
 //*******************************************************************************************
 //Работа чере DMA.
@@ -123,10 +124,10 @@ typedef enum{
 	I2C_DMA_ERR			//Ошибка DMA.
 }I2C_DMA_State_t;
 //*******************************************************************************************
-void 			I2C_DMA_Init(I2C_TypeDef *i2c, uint32_t remap);
-I2C_DMA_State_t I2C_DMA_State(void);
-I2C_DMA_State_t I2C_DMA_Write(I2C_TypeDef *i2c, uint32_t deviceAddr, uint32_t regAddr, uint8_t *pBuf, uint32_t size);
-I2C_DMA_State_t I2C_DMA_Read (I2C_TypeDef *i2c, uint32_t deviceAddr, uint8_t *pBuf, uint32_t size);
+void 	 I2C_DMA_Init(I2C_IT_t *i2cIt);
+uint32_t I2C_DMA_State(I2C_IT_t *i2cIt);
+uint32_t I2C_DMA_Write(I2C_IT_t *i2cIt);
+uint32_t I2C_DMA_Read (I2C_IT_t *i2cIt);
 //*******************************************************************************************
 //*******************************************************************************************
 #endif /* I2C_ST_H_ */

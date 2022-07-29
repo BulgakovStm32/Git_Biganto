@@ -83,6 +83,30 @@ void Task_Temperature_Read(void){
 	I2cWire.pTxBuf[8] = (uint8_t) Sensor_3.Temperature;
 
 	I2cWire.pTxBuf[9] = 0xC9;
+
+	I2cWire.txBufSize = 9;
+}
+//*******************************************************************************************
+//*******************************************************************************************
+void I2cRxParsing(void){
+
+	switch(I2cWire.pRxBuf[1])
+	{
+	//-------------------
+	case(0):
+		//LedPC13Toggel();
+	break;
+	//-------------------
+	default:
+
+	break;
+	//-------------------
+	}
+}
+//************************************************************
+void I2cTxParsing(){
+
+	LedPC13Toggel();
 }
 //*******************************************************************************************
 //*******************************************************************************************
@@ -126,18 +150,20 @@ int main(void){
 	TemperatureSens_StartConvertTemperature(&Sensor_3);
 	//***********************************************
 	//Инициализация I2C Slave для работы по прерываниям.
-	I2cWire.i2c 		 = I2C1;
-	I2cWire.i2cGpioRemap = I2C_GPIO_NOREMAP;
-	I2cWire.slaveAddr	 = 0x05;
-	I2cWire.pTxBuf  	 = slaveTxBuf;
-	I2cWire.pRxBuf  	 = slaveRxBuf;
-	I2cWire.rxBufSize	 = 4;
-	I2C_IT_Slave_Init(&I2cWire);
+	I2cWire.i2c 		  = I2C1;
+	I2cWire.i2cMode		  = I2C_MODE_SLAVE;
+	I2cWire.i2cGpioRemap  = I2C_GPIO_NOREMAP;
+	//I2cWire.i2cDmaState  = I2C_DMA_READY;
+	I2cWire.slaveAddr	  = 0x05;
+	I2cWire.pTxBuf  	  = slaveTxBuf;
+	I2cWire.pRxBuf  	  = slaveRxBuf;
+	I2cWire.rxBufSize	  = 4;
+	I2cWire.i2cRxCallback = I2cRxParsing;
+	I2cWire.i2cTxCallback = I2cTxParsing;
+	I2C_IT_Init(&I2cWire);
+	//I2C_DMA_Init(&I2cWire);
 	//***********************************************
 	//Ининциализация SPI для работы с энкодером.
-
-
-
 
 
 	//***********************************************

@@ -11,8 +11,6 @@
 
 //*******************************************************************************************
 //*******************************************************************************************
-extern I2C_IT_t	I2cWire;
-
 static uint32_t I2C1NacCount = 0;
 static uint32_t I2C2NacCount = 0;
 //*******************************************************************************************
@@ -82,6 +80,12 @@ static void _i2c_GPIO_Init(I2C_TypeDef *i2c, uint32_t remap){
 		GPIOB->CRH |= GPIO_CRH_MODE10_1 | GPIO_CRH_MODE11_1 |
 					  GPIO_CRH_CNF10    | GPIO_CRH_CNF11;
 	}
+}
+//**********************************************************
+static void _i2c_ClearFlags(I2C_TypeDef *i2c){
+
+	(void)i2c->SR1; //сбрасываем бит TXE (чтением SR1 и SR2):
+	(void)i2c->SR2;
 }
 //*******************************************************************************************
 //*******************************************************************************************
@@ -267,7 +271,7 @@ I2C_State_t I2C_Master_Read(I2C_TypeDef *i2c, uint32_t deviceAddr, uint32_t regA
 //*******************************************************************************************
 //*******************************************************************************************
 //*******************************************************************************************
-void I2C_Slave_Init(I2C_TypeDef *i2c, uint32_t slaveAddr, uint32_t remap){
+void I2C_Slave_Init(I2C_TypeDef *i2c, uint32_t remap, uint32_t slaveAddr){
 
 	_i2c_GPIO_Init(i2c, remap);
 
@@ -297,93 +301,50 @@ void I2C_Slave_Init(I2C_TypeDef *i2c, uint32_t slaveAddr, uint32_t remap){
 }
 //**********************************************************
 
-
+//**********************************************************
 
 //*******************************************************************************************
 //*******************************************************************************************
 //*******************************************************************************************
 //****************************Работа I2C по прерываниям.*************************************
-
-//static uint32_t I2cMode	 = 0;
-//static uint32_t I2cItState = 0;
-
-//static uint8_t SlaveAddr    = 0;
-//static uint8_t SlaveRegAddr = 0;
-//
-//static uint8_t *ptrTxBuf  	= 0;
-//static uint32_t TxBufSize 	= 0;
-//
-//static uint8_t *ptrRxBuf  	= 0;
-//static uint32_t RxBufSize 	= 0;
-
-//**********************************************************
-void I2C_IT_Master_Init(I2C_TypeDef *i2c, uint32_t remap){
-
-	I2C_Master_Init(i2c, remap);
-	//Инит-я прерывания.
-	i2c->CR2 |= I2C_CR2_ITEVTEN |      //Разрешение прерывания по событию.
-				I2C_CR2_ITERREN;       //Разрешение прерывания по ошибкам.
-
-	NVIC_SetPriority(I2C1_EV_IRQn, 15);//Приоритет прерывания.
-	NVIC_SetPriority(I2C1_ER_IRQn, 15);//Приоритет прерывания.
-
-	NVIC_EnableIRQ(I2C1_EV_IRQn);      //Разрешаем прерывание.
-	NVIC_EnableIRQ(I2C1_ER_IRQn);      //Разрешаем прерывание.
-}
-//**********************************************************
-//void I2C_IT_Master_StartTx(I2C_TypeDef *i2c, uint8_t deviceAddr, uint8_t regAddr, uint8_t *pTxBuf, uint32_t len){
-//
-//	SlaveAddr    = deviceAddr;
-//	SlaveRegAddr = regAddr;
-//	ptrTxBuf     = pTxBuf;
-//	TxBufSize    = len;
-//
-//	i2c->CR1  |= I2C_CR1_START;
-//	i2cIt->i2cItState = 1;
-//}
-//**********************************************************
-//void I2C_IT_Master_StartRx(I2C_TypeDef *i2c, uint8_t deviceAddr, uint8_t regAddr, uint8_t *pRxBuf, uint32_t len){
-//
-//	SlaveAddr    = deviceAddr;
-//	SlaveRegAddr = regAddr;
-//	ptrRxBuf     = pRxBuf;
-//	RxBufSize    = len;
-//
-//	i2c->CR1  |= I2C_CR1_START;
-//	i2cIt->i2cItState = 1;
-//}
-//**********************************************************
-//uint32_t I2C_IT_Master_GetState(I2C_IT_t *i2cIt){
-//
-//	return i2cIt->i2cItState;
-//}
+/*
+ * Указатели на контекст шины I2C.
+ * Они нужны для работы обработчиков прерываний.
+ */
+static I2C_IT_t	*i2c1_IT_Define;
+static I2C_IT_t	*i2c2_IT_Define;
 //*******************************************************************************************
 //*******************************************************************************************
-void I2C_IT_Slave_Init(I2C_IT_t *i2cIt){
+void I2C_IT_Init(I2C_IT_t *i2cIt){
 
-	I2C_Slave_Init(i2cIt->i2c, i2cIt->slaveAddr, i2cIt->i2cGpioRemap);
+		 if(i2cIt->i2c == I2C1)  i2c1_IT_Define = i2cIt;
+	else if(i2cIt->i2c == I2C2)  i2c2_IT_Define = i2cIt;
+	else return;
+
+	if(i2cIt->i2cMode == I2C_MODE_MASTER) I2C_Master_Init(i2cIt->i2c, i2cIt->i2cGpioRemap);
+	else								  I2C_Slave_Init (i2cIt->i2c, i2cIt->i2cGpioRemap, i2cIt->slaveAddr);
 	//Инициализация прерывания.
 	i2cIt->i2c->CR2 |= I2C_CR2_ITEVTEN | //Разрешение прерывания по событию.
 					   I2C_CR2_ITERREN;  //Разрешение прерывания по ошибкам.
 
-	NVIC_SetPriority(I2C1_EV_IRQn, 15);//Приоритет прерывания.
-	NVIC_SetPriority(I2C1_ER_IRQn, 15);//Приоритет прерывания.
+	if(i2cIt->i2c == I2C1)
+	{
+		NVIC_SetPriority(I2C1_EV_IRQn, 15);//Приоритет прерывания.
+		NVIC_SetPriority(I2C1_ER_IRQn, 15);//Приоритет прерывания.
 
-	NVIC_EnableIRQ(I2C1_EV_IRQn);      //Разрешаем прерывание.
-	NVIC_EnableIRQ(I2C1_ER_IRQn);      //Разрешаем прерывание.
+		NVIC_EnableIRQ(I2C1_EV_IRQn);      //Разрешаем прерывание.
+		NVIC_EnableIRQ(I2C1_ER_IRQn);      //Разрешаем прерывание.
+	}
+	else
+	{
+		NVIC_SetPriority(I2C2_EV_IRQn, 15);//Приоритет прерывания.
+		NVIC_SetPriority(I2C2_ER_IRQn, 15);//Приоритет прерывания.
+
+		NVIC_EnableIRQ(I2C2_EV_IRQn);      //Разрешаем прерывание.
+		NVIC_EnableIRQ(I2C2_ER_IRQn);      //Разрешаем прерывание.
+	}
 }
 //**********************************************************
-//void I2C_IT_Slave_StartRx(uint8_t *pRxBuf, uint32_t len){
-//
-//	ptrRxBuf  = pRxBuf;
-//	RxBufSize = len;
-//}
-////**********************************************************
-//void I2C_IT_Slave_StartTx(uint8_t *pTxBuf, uint32_t len){
-//
-//	ptrTxBuf  = pTxBuf;
-//	TxBufSize = len;
-//}
 //*******************************************************************************************
 //*******************************************************************************************
 //*******************************************************************************************
@@ -397,7 +358,8 @@ void I2C_IT_EV_Handler(I2C_IT_t *i2cIt){
 	//Сформирована START последоательность.
 	if(i2c->SR1 & I2C_SR1_SB)
 	{
-		(void)i2c->SR1;				         //Для сброса флага SB необходимо прочитать SR1
+		//(void)i2c->SR1;				         //Для сброса флага SB необходимо прочитать SR1
+		_i2c_ClearFlags(i2c);
 		i2c->DR = i2cIt->slaveAddr | I2C_MODE_WRITE;//Передаем адрес slave + Запись.
 		//return;
 	}
@@ -405,8 +367,9 @@ void I2C_IT_EV_Handler(I2C_IT_t *i2cIt){
 	//Окончание приема/передачи адреса.
 	if(i2c->SR1 & I2C_SR1_ADDR)
 	{
-		(void)i2c->SR1; //сбрасываем бит ADDR (чтением SR1 и SR2):
-		(void)i2c->SR2;
+//		(void)i2c->SR1; //сбрасываем бит ADDR (чтением SR1 и SR2):
+//		(void)i2c->SR2;
+		_i2c_ClearFlags(i2c);
 
 		//Master
 		if(i2c->SR2 & I2C_SR2_MSL)
@@ -436,8 +399,9 @@ void I2C_IT_EV_Handler(I2C_IT_t *i2cIt){
 	//Передающий буфер свободен.
 	if(i2c->SR1 & I2C_SR1_TXE)
 	{
-		(void)i2c->SR1; //сбрасываем бит TXE (чтением SR1 и SR2):
-		(void)i2c->SR2;
+//		(void)i2c->SR1; //сбрасываем бит TXE (чтением SR1 и SR2):
+//		(void)i2c->SR2;
+		_i2c_ClearFlags(i2c);
 
 		//Master
 		if(i2c->SR2 & I2C_SR2_MSL)
@@ -458,8 +422,10 @@ void I2C_IT_EV_Handler(I2C_IT_t *i2cIt){
 		//Slave
 		else
 		{
+			//Передаем очередной байт
 			i2c->DR = *(i2cIt->pTxBuf + i2cIt->txBufIndex);
 			i2cIt->txBufIndex++;
+			//Проверка окончания приема пакета производится в I2C_IT_ER_Handler
 		}
 		//return;
 	}
@@ -467,13 +433,16 @@ void I2C_IT_EV_Handler(I2C_IT_t *i2cIt){
 	//Принят байт.
 	if(i2c->SR1 & I2C_SR1_RXNE)
 	{
+		//Складываем принятый байт в приемный буфер.
 		if(i2cIt->rxBufIndex < i2cIt->rxBufSize)
 		{
 			*(i2cIt->pRxBuf + i2cIt->rxBufIndex) = i2c->DR;
 			i2cIt->rxBufIndex++;
 		}
+		//Приняли нужно количество байтов.
 		else
 		{
+			i2cIt->i2cRxCallback();//Обработки принятого пакета
 			i2cIt->i2cItState = 0;
 			i2cIt->rxBufIndex = 0;
 		}
@@ -483,7 +452,8 @@ void I2C_IT_EV_Handler(I2C_IT_t *i2cIt){
 	//STOP
 	if(i2c->SR1 & I2C_SR1_STOPF)
 	{
-		(void)i2c->SR1; 		  //сбрасываем бит STOPF
+		//(void)i2c->SR1; 		  //сбрасываем бит STOPF
+		_i2c_ClearFlags(i2c);
 		i2c->CR1 &= ~I2C_CR1_STOP;//
 		return;
 	}
@@ -500,11 +470,18 @@ void I2C_IT_EV_Handler(I2C_IT_t *i2cIt){
 void I2C_IT_ER_Handler(I2C_IT_t *i2cIt){
 
 	I2C_TypeDef *i2c = i2cIt->i2c;
-	LedPC13Toggel();
+	//LedPC13Toggel();
 	//------------------------------
 	//NACK - Acknowledge failure
 	if(i2c->SR1 & I2C_SR1_AF)
 	{
+		//передали нужное количество байтов.
+		if(i2cIt->txBufIndex >= i2cIt->txBufSize)
+		{
+			i2cIt->i2cTxCallback();//Обработки события передачи буфера
+			i2cIt->i2cItState = 0;
+			i2cIt->txBufIndex = 0;
+		}
 		i2c->SR1 &= ~I2C_SR1_AF; //Сброс AF.
 		//i2c->CR1 |= I2C_CR1_STOP;//Формируем Stop
 		return;
@@ -552,28 +529,28 @@ void I2C_IT_ER_Handler(I2C_IT_t *i2cIt){
 //Обработчик прерывания событий I2C
 void I2C1_EV_IRQHandler(void){
 
-	I2C_IT_EV_Handler(&I2cWire);
+	I2C_IT_EV_Handler(i2c1_IT_Define);
 }
 //**********************************************************
 //Обработчик прерывания ошибок I2C
 void I2C1_ER_IRQHandler(void){
 
-	I2C_IT_ER_Handler(&I2cWire);
+	I2C_IT_ER_Handler(i2c1_IT_Define);
 }
 //**********************************************************
-////Обработчик прерывания событий I2C
-//void I2C2_EV_IRQHandler(void){
-//
-//	I2C_IT_EV_Handler(I2C2);
-//}
-////**********************************************************
-////Обработчик прерывания ошибок I2C
-//void I2C2_ER_IRQHandler(void){
-//
-//	I2C_IT_ER_Handler(I2C2);
-//}
-////*******************************************************************************************
-////*******************************************************************************************
+//Обработчик прерывания событий I2C
+void I2C2_EV_IRQHandler(void){
+
+	I2C_IT_EV_Handler(i2c2_IT_Define);
+}
+//**********************************************************
+//Обработчик прерывания ошибок I2C
+void I2C2_ER_IRQHandler(void){
+
+	I2C_IT_ER_Handler(i2c2_IT_Define);
+}
+//*******************************************************************************************
+//*******************************************************************************************
 //*******************************************************************************************
 //**********************************Работа с I2C через DMA.**********************************
 //I2C1_TX -> DMA1_Ch6
@@ -582,46 +559,38 @@ void I2C1_ER_IRQHandler(void){
 //I2C2_TX -> DMA1_Ch4
 //I2C2_RX -> DMA1_Ch5
 
-static volatile I2C_DMA_State_t I2cDmaStateReg = I2C_DMA_NOT_INIT;
+//static volatile I2C_DMA_State_t I2cDmaStateReg = I2C_DMA_NOT_INIT;
 //*******************************************************************************************
-void I2C_DMA_Init(I2C_TypeDef *i2c, uint32_t remap){
+void I2C_DMA_Init(I2C_IT_t *i2cIt){
 
-	I2C_Master_Init(i2c, remap);			 //I2C Config.
-
-	//Инит-я прерывания.
-	i2c->CR2 |= I2C_CR2_ITEVTEN | //Разрешение прерывания по событию.
-				I2C_CR2_ITERREN;  //Разрешение прерывания по ошибкам.
-
-//	NVIC_SetPriority(I2C1_EV_IRQn, 15);//Приоритет прерывания.
-//	NVIC_EnableIRQ(I2C1_EV_IRQn);      //Разрешаем прерывание.
-
-	NVIC_SetPriority(I2C1_ER_IRQn, 15);//Приоритет прерывания.
-	NVIC_EnableIRQ(I2C1_ER_IRQn);      //Разрешаем прерывание.
+	I2C_IT_Init(i2cIt);
 
 	RCC->AHBENR |= RCC_AHBENR_DMA1EN;//Enable the peripheral clock DMA1
-	I2cDmaStateReg = I2C_DMA_READY;
+	i2cIt->i2cDmaState = I2C_DMA_READY;
 }
 //**********************************************************
-I2C_DMA_State_t I2C_DMA_State(void){
+uint32_t I2C_DMA_State(I2C_IT_t *i2cIt){
 
-	return I2cDmaStateReg;
+	return i2cIt->i2cDmaState;
 }
 //**********************************************************
-I2C_DMA_State_t I2C_DMA_Write(I2C_TypeDef *i2c, uint32_t deviceAddr, uint32_t regAddr, uint8_t *pBuf, uint32_t size){
+//I2C_DMA_State_t I2C_DMA_Write(I2C_TypeDef *i2c, uint32_t deviceAddr, uint32_t regAddr, uint8_t *pBuf, uint32_t size){
+uint32_t I2C_DMA_Write(I2C_IT_t *i2cIt){
 
 	DMA_Channel_TypeDef *dma;
+	I2C_TypeDef *i2c = i2cIt->i2c;
 	//------------------------------
-	if(I2cDmaStateReg != I2C_DMA_READY) return I2C_DMA_BUSY;
+	if(i2cIt->i2cDmaState != I2C_DMA_READY) return I2C_DMA_BUSY;
 
 	__disable_irq();
 	//DMA1Channel config
 	if(i2c == I2C1) dma = DMA1_Channel6;//I2C1_TX -> DMA1_Ch6
-	else			dma = DMA1_Channel4;//I2C2_TX -> DMA1_Ch4
+	else				   dma = DMA1_Channel4;//I2C2_TX -> DMA1_Ch4
 
 	dma->CCR  &= ~DMA_CCR_EN;		  		//Channel disable
 	dma->CPAR  = (uint32_t)&(i2c->DR);		//Peripheral address.
-	dma->CMAR  = (uint32_t)pBuf;	  		//Memory address.
-	dma->CNDTR = size;				  		//Data size.
+	dma->CMAR  = (uint32_t)i2cIt->pTxBuf;	//Memory address.
+	dma->CNDTR = i2cIt->txBufSize;	  		//Data size.
 	dma->CCR   = (3 << DMA_CCR_PL_Pos)   | 	//PL[1:0]: Channel priority level - 11: Very high.
 			     (0 << DMA_CCR_PSIZE_Pos)| 	//PSIZE[1:0]: Peripheral size - 00: 8-bits.
 				 (0 << DMA_CCR_MSIZE_Pos)| 	//MSIZE[1:0]: Memory size     - 00: 8-bits.
@@ -637,25 +606,26 @@ I2C_DMA_State_t I2C_DMA_Write(I2C_TypeDef *i2c, uint32_t deviceAddr, uint32_t re
 
 	i2c->CR2 |= I2C_CR2_DMAEN;//DMAEN(DMA requests enable)
 	//Формирование Start + AddrSlave|Write.
-	if(I2C_StartAndSendDeviceAddr(i2c, deviceAddr|I2C_MODE_WRITE) != I2C_OK)
-	{
-		__enable_irq();
-		return I2C_DMA_NAC;
-	}
-	//Передача адреса в который хотим записать.
-	i2c->DR = regAddr;
+//	if(I2C_StartAndSendDeviceAddr(i2c, (i2cIt->slaveAddr<<1)|I2C_MODE_WRITE) != I2C_OK)
+//	{
+//		__enable_irq();
+//		return I2C_DMA_NAC;
+//	}
+//	//Передача адреса в который хотим записать.
+//	i2c->DR = i2cIt->slaveRegAddr;
 
 	dma->CCR |= DMA_CCR_EN;//DMA Channel enable
-	I2cDmaStateReg = I2C_DMA_BUSY;
+	i2cIt->i2cDmaState = I2C_DMA_BUSY;
 	__enable_irq();
 	return I2C_DMA_BUSY;
 }
 //**********************************************************
-I2C_DMA_State_t I2C_DMA_Read(I2C_TypeDef *i2c, uint32_t deviceAddr, uint8_t *pBuf, uint32_t size){
+uint32_t I2C_DMA_Read (I2C_IT_t *i2cIt){
 
 	DMA_Channel_TypeDef *dma;
+	I2C_TypeDef *i2c = i2cIt->i2c;
 	//------------------------------
-	if(I2cDmaStateReg != I2C_DMA_READY) return I2C_DMA_BUSY;
+	if(i2cIt->i2cDmaState != I2C_DMA_READY) return I2C_DMA_BUSY;
 
 	__disable_irq();
 	//DMA1Channel config
@@ -664,8 +634,8 @@ I2C_DMA_State_t I2C_DMA_Read(I2C_TypeDef *i2c, uint32_t deviceAddr, uint8_t *pBu
 
 	dma->CCR  &= ~DMA_CCR_EN;		  	 	//Channel disable
 	dma->CPAR  = (uint32_t)&(i2c->DR);	 	//Peripheral address.
-	dma->CMAR  = (uint32_t)pBuf;	  	 	//Memory address.
-	dma->CNDTR = size;				  	 	//Data size.
+	dma->CMAR  = (uint32_t)i2cIt->pRxBuf; 	//Memory address.
+	dma->CNDTR = i2cIt->rxBufSize;	  	 	//Data size.
 	dma->CCR   = (3 << DMA_CCR_PL_Pos)   | 	//PL[1:0]: Channel priority level - 11: Very high.
 			     (0 << DMA_CCR_PSIZE_Pos)| 	//PSIZE[1:0]: Peripheral size - 00: 8-bits.
 				 (0 << DMA_CCR_MSIZE_Pos)| 	//MSIZE[1:0]: Memory size     - 00: 8-bits.
@@ -682,7 +652,7 @@ I2C_DMA_State_t I2C_DMA_Read(I2C_TypeDef *i2c, uint32_t deviceAddr, uint8_t *pBu
 	i2c->CR2 |= I2C_CR2_DMAEN | //DMA Requests Enable.
 				I2C_CR2_LAST;	//DMA Last Transfer.
 	//Формирование Start + AddrSlave|Write.
-	if(I2C_StartAndSendDeviceAddr(i2c, deviceAddr|I2C_MODE_READ) != I2C_OK)
+	if(I2C_StartAndSendDeviceAddr(i2c, (i2cIt->slaveAddr<<1)|I2C_MODE_READ) != I2C_OK)
 	{
 		__enable_irq();
 		return I2C_DMA_NAC;
@@ -690,7 +660,7 @@ I2C_DMA_State_t I2C_DMA_Read(I2C_TypeDef *i2c, uint32_t deviceAddr, uint8_t *pBu
 	i2c->CR1 |= I2C_CR1_ACK;//to be ready for another reception
 
 	dma->CCR |= DMA_CCR_EN;//DMA Channel enable
-	I2cDmaStateReg = I2C_DMA_BUSY;
+	i2cIt->i2cDmaState = I2C_DMA_BUSY;
 	__enable_irq();
 	return I2C_DMA_BUSY;
 }
@@ -710,8 +680,7 @@ static void DMA_ChDisableAndITFlagClear(DMA_Channel_TypeDef *dma, uint32_t flag)
 	dma->CCR   &= ~DMA_CCR_EN;//отключение канала DMA.
 }
 //**********************************************************
-//I2C1_TX -> DMA1_Ch6
-void DMA1_Channel6_IRQHandler(void){
+void I2C_DMA_TX_Handler(I2C_IT_t *i2cIt){
 
 	//-------------------------
 	//Обмен завершен.
@@ -719,11 +688,10 @@ void DMA1_Channel6_IRQHandler(void){
 	{
 		DMA_ChDisableAndITFlagClear(DMA1_Channel6, DMA_IFCR_CTCIF6);
 		//Ожидаем окончания передачи последних байтов.
-		while(!(I2C1->SR1 & I2C_SR1_BTF)){};//Ждем отпускания флага.
-		I2C1->CR1 |= I2C_CR1_STOP | //Формируем Stop
-					 I2C_CR1_ACK;
-
-		I2cDmaStateReg = I2C_DMA_READY;
+		while(!(i2cIt->i2c->SR1 & I2C_SR1_BTF)){};//Ждем отпускания флага.
+		i2cIt->i2c->CR1 |= I2C_CR1_STOP | //Формируем Stop
+					       I2C_CR1_ACK;
+		i2cIt->i2cDmaState = I2C_DMA_READY;
 	}
 	//-------------------------
 	//Передана половина буфера
@@ -736,13 +704,13 @@ void DMA1_Channel6_IRQHandler(void){
 	if(DMA1->ISR & DMA_ISR_TEIF6)
 	{
 		DMA_ChDisableAndITFlagClear(DMA1_Channel6 ,DMA_IFCR_CTEIF6);
-		I2cDmaStateReg = I2C_DMA_READY;
+		i2cIt->i2cDmaState = I2C_DMA_READY;
 	}
 	//-------------------------
+
 }
 //**********************************************************
-//I2C1_RX -> DMA1_Ch7
-void DMA1_Channel7_IRQHandler(void){
+void I2C_DMA_RX_Handler(I2C_IT_t *i2cIt){
 
 	//-------------------------
 	//Обмен завершен.
@@ -757,9 +725,9 @@ void DMA1_Channel7_IRQHandler(void){
 //					     I2C_CR1_ACK;
 //		}
 
-		I2C1->CR1 |= I2C_CR1_STOP | //Формируем Stop
+		i2cIt->i2c->CR1 |= I2C_CR1_STOP | //Формируем Stop
 				     I2C_CR1_ACK;
-		I2cDmaStateReg = I2C_DMA_READY;
+		i2cIt->i2cDmaState = I2C_DMA_READY;
 	}
 	//-------------------------
 	//Передана половина буфера
@@ -772,9 +740,82 @@ void DMA1_Channel7_IRQHandler(void){
 	if(DMA1->ISR & DMA_ISR_TEIF7)
 	{
 		DMA_ChDisableAndITFlagClear(DMA1_Channel7, DMA_IFCR_CTEIF7);
-		I2cDmaStateReg = I2C_DMA_READY;
+		i2cIt->i2cDmaState = I2C_DMA_READY;
 	}
 	//-------------------------
+}
+//*******************************************************************************************
+//*******************************************************************************************
+//I2C1_TX -> DMA1_Ch6
+void DMA1_Channel6_IRQHandler(void){
+
+	I2C_DMA_TX_Handler(i2c1_IT_Define);
+
+
+//	//-------------------------
+//	//Обмен завершен.
+//	if(DMA1->ISR & DMA_ISR_TCIF6)
+//	{
+//		DMA_ChDisableAndITFlagClear(DMA1_Channel6, DMA_IFCR_CTCIF6);
+//		//Ожидаем окончания передачи последних байтов.
+//		while(!(I2C1->SR1 & I2C_SR1_BTF)){};//Ждем отпускания флага.
+//		I2C1->CR1 |= I2C_CR1_STOP | //Формируем Stop
+//					 I2C_CR1_ACK;
+//
+//		I2cDmaStateReg = I2C_DMA_READY;
+//	}
+//	//-------------------------
+//	//Передана половина буфера
+//	if(DMA1->ISR & DMA_ISR_HTIF6)
+//	{
+//		DMA1->IFCR |= DMA_IFCR_CHTIF6;//сбросить флаг.
+//	}
+//	//-------------------------
+//	//Произошла ошибка при обмене
+//	if(DMA1->ISR & DMA_ISR_TEIF6)
+//	{
+//		DMA_ChDisableAndITFlagClear(DMA1_Channel6 ,DMA_IFCR_CTEIF6);
+//		I2cDmaStateReg = I2C_DMA_READY;
+//	}
+//	//-------------------------
+}
+//**********************************************************
+//I2C1_RX -> DMA1_Ch7
+void DMA1_Channel7_IRQHandler(void){
+
+	I2C_DMA_RX_Handler(i2c1_IT_Define);
+
+//	//-------------------------
+//	//Обмен завершен.
+//	if(DMA1->ISR & DMA_ISR_TCIF7)
+//	{
+//		DMA_ChDisableAndITFlagClear(DMA1_Channel7, DMA_IFCR_CTCIF7);
+//
+////		//Ожидаем окончания приема последних байтов.
+////		if(I2C_LongWait(I2C1, I2C_SR1_BTF) != 0)
+////		{
+////			I2C1->CR1 |= I2C_CR1_STOP | //Формируем Stop
+////					     I2C_CR1_ACK;
+////		}
+//
+//		I2C1->CR1 |= I2C_CR1_STOP | //Формируем Stop
+//				     I2C_CR1_ACK;
+//		I2cDmaStateReg = I2C_DMA_READY;
+//	}
+//	//-------------------------
+//	//Передана половина буфера
+//	if(DMA1->ISR & DMA_ISR_HTIF7)
+//	{
+//		DMA1->IFCR |= DMA_IFCR_CHTIF7;//сбросить флаг.
+//	}
+//	//-------------------------
+//	//Произошла ошибка при обмене
+//	if(DMA1->ISR & DMA_ISR_TEIF7)
+//	{
+//		DMA_ChDisableAndITFlagClear(DMA1_Channel7, DMA_IFCR_CTEIF7);
+//		I2cDmaStateReg = I2C_DMA_READY;
+//	}
+//	//-------------------------
 }
 //**********************************************************
 
