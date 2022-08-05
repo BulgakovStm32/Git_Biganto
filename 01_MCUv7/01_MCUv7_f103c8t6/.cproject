@@ -87,8 +87,6 @@
                                     									
                                     <listOptionValue builtIn="false" value="&quot;${workspace_loc:/MCUv7_f103c8t6/My/CMSIS}&quot;"/>
                                     									
-                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc:/MCUv7_f103c8t6/My/Drivers}&quot;"/>
-                                    									
                                     <listOptionValue builtIn="false" value="&quot;${workspace_loc:/MCUv7_f103c8t6/My/Main}&quot;"/>
                                     									
                                     <listOptionValue builtIn="false" value="&quot;${workspace_loc:/MCUv7_f103c8t6/My/MiddleLevel}&quot;"/>
@@ -98,6 +96,10 @@
                                     <listOptionValue builtIn="false" value="&quot;${workspace_loc:/MCUv7_f103c8t6/My/Sheduler}&quot;"/>
                                     									
                                     <listOptionValue builtIn="false" value="&quot;${workspace_loc:/MCUv7_f103c8t6/My/Startup}&quot;"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc:/MCUv7_f103c8t6/My/STM32_Perif}&quot;"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc:/MCUv7_f103c8t6/MCUv7}&quot;"/>
                                     								
                                 </option>
                                 								

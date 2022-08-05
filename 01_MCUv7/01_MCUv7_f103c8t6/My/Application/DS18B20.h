@@ -68,6 +68,7 @@ typedef struct{
 //void 	 TemperatureSens_Init(void);
 void 	 TemperatureSens_GpioInit(DS18B20_t *sensor);
 void 	 TemperatureSens_SetResolution(DS18B20_t *sensor);
+void 	 TemperatureSens_Init(DS18B20_t *sensor);
 void 	 TemperatureSens_StartConvertTemperature(DS18B20_t *sensor);
 void     TemperatureSens_ReadTemperature(DS18B20_t *sensor);
 uint32_t TemperatureSens_Sign(DS18B20_t *sensor);

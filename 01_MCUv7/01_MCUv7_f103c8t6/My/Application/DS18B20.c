@@ -293,6 +293,12 @@ void TemperatureSens_SetResolution(DS18B20_t *sensor){
 	//DELAY_WAIT_CONVERT = DELAY_T_CONVERT / DS18B20_GetDevider(sensor);
 }
 //**********************************************************
+void TemperatureSens_Init(DS18B20_t *sensor){
+
+	TemperatureSens_GpioInit(sensor);
+	TemperatureSens_SetResolution(sensor);
+}
+//**********************************************************
 void TemperatureSens_StartConvertTemperature(DS18B20_t *sensor){
 
 	uint32_t      pin  = sensor->GPIO_PIN;

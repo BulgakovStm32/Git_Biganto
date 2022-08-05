@@ -84,7 +84,7 @@ static void _i2c_GPIO_Init(I2C_TypeDef *i2c, uint32_t remap){
 //**********************************************************
 static void _i2c_ClearFlags(I2C_TypeDef *i2c){
 
-	(void)i2c->SR1; //сбрасываем бит TXE (чтением SR1 и SR2):
+	(void)i2c->SR1; //сбрасываем флаги чтением SR1 и SR2.
 	(void)i2c->SR2;
 }
 //*******************************************************************************************
@@ -345,6 +345,8 @@ void I2C_IT_Init(I2C_IT_t *i2cIt){
 	}
 }
 //**********************************************************
+
+
 //*******************************************************************************************
 //*******************************************************************************************
 //*******************************************************************************************
@@ -353,13 +355,11 @@ void I2C_IT_Init(I2C_IT_t *i2cIt){
 void I2C_IT_EV_Handler(I2C_IT_t *i2cIt){
 
 	I2C_TypeDef *i2c = i2cIt->i2c;
-	//LedPC13Toggel();
 	//------------------------------
-	//Сформирована START последоательность.
+	//Start bit (Master mode) - Сформирована START последоательность.
 	if(i2c->SR1 & I2C_SR1_SB)
 	{
-		//(void)i2c->SR1;				         //Для сброса флага SB необходимо прочитать SR1
-		_i2c_ClearFlags(i2c);
+		_i2c_ClearFlags(i2c);//Для сброса флага SB необходимо прочитать SR1
 		i2c->DR = i2cIt->slaveAddr | I2C_MODE_WRITE;//Передаем адрес slave + Запись.
 		//return;
 	}
@@ -367,10 +367,7 @@ void I2C_IT_EV_Handler(I2C_IT_t *i2cIt){
 	//Окончание приема/передачи адреса.
 	if(i2c->SR1 & I2C_SR1_ADDR)
 	{
-//		(void)i2c->SR1; //сбрасываем бит ADDR (чтением SR1 и SR2):
-//		(void)i2c->SR2;
 		_i2c_ClearFlags(i2c);
-
 		//Master
 		if(i2c->SR2 & I2C_SR2_MSL)
 		{
@@ -380,13 +377,13 @@ void I2C_IT_EV_Handler(I2C_IT_t *i2cIt){
 		//Slave
 		else
 		{
-			//От Мастера пришла команда на чтение.
+			//От Мастера пришла команда на чтение - SLA+R
 			if(i2c->SR2 & I2C_SR2_TRA)
 			{
 				i2c->DR = *(i2cIt->pTxBuf + 0);
 				i2cIt->txBufIndex = 1;
 			}
-			//От Мастера пришла команда на запись.
+			//От Мастера пришла команда на запись - SLA+W
 //			else
 //			{
 //				*(i2cIt->pRxBuf + 0) = i2c->DR; //Сохранили первый байт
@@ -399,10 +396,7 @@ void I2C_IT_EV_Handler(I2C_IT_t *i2cIt){
 	//Передающий буфер свободен.
 	if(i2c->SR1 & I2C_SR1_TXE)
 	{
-//		(void)i2c->SR1; //сбрасываем бит TXE (чтением SR1 и SR2):
-//		(void)i2c->SR2;
-		_i2c_ClearFlags(i2c);
-
+		_i2c_ClearFlags(i2c);//сбрасываем бит TXE (чтением SR1 и SR2):
 		//Master
 		if(i2c->SR2 & I2C_SR2_MSL)
 		{
@@ -434,27 +428,41 @@ void I2C_IT_EV_Handler(I2C_IT_t *i2cIt){
 	if(i2c->SR1 & I2C_SR1_RXNE)
 	{
 		//Складываем принятый байт в приемный буфер.
-		if(i2cIt->rxBufIndex < i2cIt->rxBufSize)
+		if(i2cIt->rxBufIndex < I2C_IT_RX_BUF_LEN_MAX)
 		{
 			*(i2cIt->pRxBuf + i2cIt->rxBufIndex) = i2c->DR;
 			i2cIt->rxBufIndex++;
 		}
-		//Приняли нужно количество байтов.
-		else
-		{
-			i2cIt->i2cRxCallback();//Обработки принятого пакета
-			i2cIt->i2cItState = 0;
-			i2cIt->rxBufIndex = 0;
-		}
+
+
+
+
+
+//		//Складываем принятый байт в приемный буфер.
+//		if(i2cIt->rxBufIndex < i2cIt->rxBufSize)
+//		{
+//			*(i2cIt->pRxBuf + i2cIt->rxBufIndex) = i2c->DR;
+//			i2cIt->rxBufIndex++;
+//		}
+//		//Приняли нужно количество байтов.
+//		else
+//		{
+//			i2cIt->i2cRxCallback();//Обработка принятого пакета
+//			i2cIt->i2cItState = 0;
+//			i2cIt->rxBufIndex = 0;
+//		}
 		//return;
 	}
 	//------------------------------
 	//STOP
 	if(i2c->SR1 & I2C_SR1_STOPF)
 	{
-		//(void)i2c->SR1; 		  //сбрасываем бит STOPF
-		_i2c_ClearFlags(i2c);
+		_i2c_ClearFlags(i2c);	  //сбрасываем бит STOPF
 		i2c->CR1 &= ~I2C_CR1_STOP;//
+
+		i2cIt->i2cRxCallback();//Обработка принятого пакета
+		i2cIt->i2cItState = 0;
+		i2cIt->rxBufIndex = 0;
 		return;
 	}
 	//------------------------------

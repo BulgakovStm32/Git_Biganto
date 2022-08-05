@@ -7,7 +7,7 @@ void SysTick_Init(void){
 
 	SysTick->LOAD = TimerTick;	//Загрузка значения.
 	SysTick->VAL  = TimerTick;	//Обнуление таймера. 
-                              //При записи любого значения этот регист обнуляется, с обнулением флага COUNTFLAG. 
+                                //При записи любого значения этот регист обнуляется, с обнулением флага COUNTFLAG.
 	SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk | //Тактирование частотой процессора (24МГц).
 					SysTick_CTRL_TICKINT_Msk   | //Рразрешение прерывания.
 					SysTick_CTRL_ENABLE_Msk;     //Резрешение таймеру считать.

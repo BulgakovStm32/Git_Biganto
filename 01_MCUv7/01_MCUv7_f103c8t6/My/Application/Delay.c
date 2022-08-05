@@ -26,27 +26,30 @@ void msDelay(volatile uint32_t del){
 //*******************************************************************************************
 //*******************************************************************************************
 //Микросекундная задержка.
-//#define DWT_CONTROL *(volatile unsigned long *)0xE0001000
-//#define SCB_DEMCR   *(volatile unsigned long *)0xE000EDFC
-
-#define SYS_CORE_CLOCK     72000000
-#define TACTS_FOR_MICROSEC (SYS_CORE_CLOCK/1000000)
+#define SYS_CORE_CLOCK     72000000U
+#define TACTS_FOR_MICROSEC 72 //(SYS_CORE_CLOCK/1000000U)
 
 //**********************************************************
 void microDelay_Init(void){
 
 	CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk; // разрешаем использовать счётчик
 	DWT->CTRL        |= DWT_CTRL_CYCCNTENA_Msk;     // запускаем счётчик
+}
+//**********************************************************
+uint32_t micro(void){
 
-	//SCB_DEMCR |= CoreDebug_DEMCR_TRCENA_Msk; // разрешаем использовать счётчик
-	//DWT_CONTROL |= DWT_CTRL_CYCCNTENA_Msk;   // запускаем счётчик
+	return (DWT->CYCCNT / TACTS_FOR_MICROSEC);
+	//return DWT->CYCCNT ;
 }
 //**********************************************************
 void microDelay(uint32_t uS){
 
-    uint32_t uS_count_tic = uS * TACTS_FOR_MICROSEC;// получаем кол-во тактов за 1 мкс и умножаем на наше значение
-    DWT->CYCCNT = 0U; // обнуляем счётчик
-    while(DWT->CYCCNT < uS_count_tic);
+//    uint32_t uS_count_tic = uS * TACTS_FOR_MICROSEC;// получаем кол-во тактов за 1 мкс и умножаем на наше значение
+//    DWT->CYCCNT = 0U; // обнуляем счётчик
+//    while(DWT->CYCCNT < uS_count_tic);
+
+    uint32_t old = micro();
+    while((micro() - old) < uS);
 }
 //*******************************************************************************************
 //*******************************************************************************************

@@ -16,8 +16,9 @@
 void msDelay_Loop(void);
 void msDelay(volatile uint32_t del);
 
-void microDelay_Init(void);
-void microDelay(uint32_t uS);
+void 	 microDelay_Init(void);
+uint32_t micro(void);
+void 	 microDelay(uint32_t uS);
 //************************************************************************************************************
 //************************************************************************************************************
 #endif /* DELAY_H_ */
