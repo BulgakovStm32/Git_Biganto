@@ -83,6 +83,9 @@ void Task_Temperature_Read(void){
 	I2cWire.txBufSize = 9;
 
 //	LED_ACT_Toggel();
+
+//	static uint32_t usartBuf = 0x87654321;
+//	DMA1Ch4StartTx((uint8_t*)&usartBuf, 4);
 }
 //************************************************************
 //ф-я вызыввается каждые 100мс.
@@ -110,7 +113,7 @@ void Task_PwrButtonPolling(void){
 //*******************************************************************************************
 void I2cRxParsing(void){
 
-	static uint32_t spiData = 0;
+	static volatile uint32_t spiData = 0;
 
 	switch(I2cWire.pRxBuf[0])
 	{
@@ -121,19 +124,19 @@ void I2cRxParsing(void){
 		break;
 		//-------------------
 		case(cmdGetCurrentAcceleration):
-				//LED_ACT_Toggel();
+				LED_ACT_Toggel();
 		break;
 		//-------------------
 		case(cmdGetCurrentVelocity):
-				//LED_ACT_Toggel();
+				LED_ACT_Toggel();
 		break;
 		//-------------------
 		case(cmdSetTargetPosition):
-				//LED_ACT_Toggel();
+				LED_ACT_Toggel();
 		break;
 		//-------------------
 		case(cmdSetMaxAcceleration):
-				//LED_ACT_Toggel();
+				LED_ACT_Toggel();
 		break;
 		//-------------------
 		case(cmdSetMaxVelocity):
@@ -182,19 +185,116 @@ void I2cTxParsing(void){
 }
 //*******************************************************************************************
 //*******************************************************************************************
+//Работа с энкодером AMM3617.Энкодер выдает 17-тибитный код Грея.
+//#define ENCODER_RESOLUTION	17		 			//Разрешение энеодера.
+//#define ENCODER_NUM_STEP	(2^ENCODER_RESOLUTION)	//количество шагов энкодера на один оборот
+
+#define ENCODER_NUM_STEP 		131072 					         //количество шагов энкодера на один оборот
+#define ENCODER_DEGREE_QUANT  	(float)(360.0 / ENCODER_NUM_STEP)//количество градусов в одном наге энкодера.
+
+//#define ENCODER_TIMEOUT 		(30 / 10)			      //деление на 10 так как uSecTick = 10 мкСек.
+#define _RPM					60
+#define QUANT_FOR_100mS     	((_RPM * (1000/100) * 1000) / 360.0)
+#define QUANT_FOR_10mS      	((_RPM * (1000/10)  * 1000) / 360.0)
+#define QUANT_FOR_64mS      	((_RPM * (1000/64)  * 1000) / 360.0)
+//********************************************************
+volatile uint32_t sysTick      		= 0;
+volatile uint32_t EncoderTicks 		= 0;
+
+volatile float Angle           		= 0.0;
+volatile float OldAngle        		= 0.0;
+volatile float DeltaAngle      		= 0.0;
+volatile float RPM             		= 0.0;
+
+
+uint8_t txBuf[64] = {0,};
+//*******************************************************************************************
+void BinToDecWithoutDot(uint32_t var, uint8_t* buf){
+
+	*(buf+0) = (uint8_t)(var / 100000) + '0';
+	var %= 100000;
+
+	*(buf+1) = (uint8_t)(var / 10000) + '0';
+	var %= 10000;
+
+	*(buf+2) = (uint8_t)(var / 1000) + '0';
+	var %= 1000;
+
+	//*(buf+3) = ',';
+
+	*(buf+3) = (uint8_t)(var / 100) + '0';
+	var %= 100;
+
+	*(buf+4) = (uint8_t)(var / 10) + '0';
+	*(buf+5) = (uint8_t)(var % 10) + '0';
+}
+//************************************************************
+void BinToDecWithDot(uint32_t var, uint8_t* buf){
+
+	*(buf+0) = (uint8_t)(var / 100000) + '0';
+	var %= 100000;
+
+	*(buf+1) = (uint8_t)(var / 10000) + '0';
+	var %= 10000;
+
+	*(buf+2) = (uint8_t)(var / 1000) + '0';
+	var %= 1000;
+
+	*(buf+3) = ',';
+
+	*(buf+4) = (uint8_t)(var / 100) + '0';
+	var %= 100;
+
+	*(buf+5) = (uint8_t)(var / 10) + '0';
+	*(buf+6) = (uint8_t)(var % 10) + '0';
+}
+//************************************************************
+void BuildAndSendTextBuf(uint32_t timeStamp, uint32_t encodTicks, uint32_t angle, uint32_t speed){
+
+	BinToDecWithDot(timeStamp, txBuf);
+	txBuf[7] = '\t';
+
+	BinToDecWithoutDot(encodTicks, txBuf+8);
+	txBuf[14] = '\t';
+
+	BinToDecWithDot(angle, txBuf+15);
+	txBuf[22] = '\t';
+
+	BinToDecWithDot(speed, txBuf+23);
+	txBuf[30] = '\r';
+
+	DMA1Ch4StartTx(txBuf, 31);
+}
+//************************************************************
+void Task_Motor(void){
+
+	static uint32_t flag = 0;
+
+	if(!flag)
+	{
+		MOTOR_SpinStart(MOTOR_DECEL);
+		flag = 1;
+	}
+	else
+	{
+		MOTOR_SpinStart(MOTOR_ACCEL);
+		flag = 0;
+	}
+}
+//*******************************************************************************************
+//*******************************************************************************************
 int main(void){
 
 	//-----------------------------
 	//Drivers.
-	Sys_Init();
+	STM32_Clock_Init();
 	GPIO_Init();
 	SysTick_Init();
 	microDelay_Init();
 	//Uart1Init(USART1_BRR);
 	//Adc_Init();
 
-	microDelay(100000);//Эта задержка нужна для стабилизации напряжения патания.
-					   //Без задержки LCD-дисплей не работает.
+	microDelay(1000000);//Эта задержка нужна для стабилизации напряжения патания.
 	//***********************************************
 	//Включение питания платы.
 	while(GPIO_GetPinState(MCU_PWR_BTN_GPIO, MCU_PWR_BTN_PIN) == PIN_LOW); //Пока кнопку не отпустя плата не включится.
@@ -204,6 +304,8 @@ int main(void){
 	LAMP_PWM_High();
 	LIDAR_EN_High();
 	GPS_EN_High();
+
+	microDelay(1000000);//Эта задержка нужна для стабилизации напряжения патания.
 	//***********************************************
 	//Инициализация DS18B20.
 	Sensor_1.SensorNumber = 1;
@@ -223,6 +325,12 @@ int main(void){
 	//Ининциализация энкодера.
 	ENCODER_Init();
 	//***********************************************
+	//Ининциализация оптических дадчитков наличия крышки объетива и наличия АКБ.
+	OPT_SENS_Init();
+	//***********************************************
+	USART_Init(USART1, 57600);
+
+	//***********************************************
 	//Инициализация I2C Slave для работы по прерываниям.
 	I2cWire.i2c 		  = I2C2;
 	I2cWire.i2cMode		  = I2C_MODE_SLAVE;
@@ -236,14 +344,18 @@ int main(void){
 	//I2C_DMA_Init(&I2cWire);
 	//***********************************************
 	//Инициализация	драйвера мотора.
-	//MOTOR_Init();
+	MOTOR_Init();
+	MOTOR_CalculateAccelDecel(0, 250, 1500);
+	MOTOR_SpinStart(MOTOR_ACCEL);
 
-	TIM2_Init();
+	//MOTOR_SetMaxVelocity(400); //Задание скорости в RPM
+
 	//***********************************************
 	//Ини-я диспетчера.
 	RTOS_Init();
 	RTOS_SetTask(Task_Temperature_Read, 0, 1000);
 	RTOS_SetTask(Task_PwrButtonPolling, 0, 100);
+	RTOS_SetTask(Task_Motor, 5000, 5000);
 
 	//RTOS_SetTask(Task_STM32_Slave_Write,0, 500);
 	//RTOS_SetTask(Task_STM32_Slave_Read, 0, 500);
@@ -260,12 +372,48 @@ int main(void){
 //*******************************************************************************************
 //*******************************************************************************************
 //Прерывание каждую милисекунду.
-void SysTick_Handler(void){
+void SysTick_IT_Handler(void){
 
 	RTOS_TimerServiceLoop();
 	msDelay_Loop();
 	Blink_Loop();
 	GPIO_CheckLoop();
+	OPT_SENS_CheckLoop();
+	//------------------------------------------
+	//Работа с энкодером
+	static uint32_t mSecCount = 0;
+	//Формирование таймстемпов
+	sysTick++;
+	if(sysTick > 999999) sysTick = 0;
+	//--------------------------
+	if(++mSecCount >= 100)
+	{
+		mSecCount = 0;
+
+		//__disable_irq();
+		//LED_ACT_High();
+		//Чтение заначения энкодера. ~9,5 мкС
+		EncoderTicks = ENCODER_GetVal();
+		//LED_ACT_Low();
+		//Расчет значений для будущего расчета скрости.
+		Angle = ENCODER_DEGREE_QUANT * EncoderTicks;  //расчет угла поворота вала энкодера.
+		if(OldAngle > Angle) OldAngle -= 360.0;		  //Это нужно для корректного расчета скорости при переходе от 359 к 0 градусов.
+		DeltaAngle = Angle - OldAngle;         		  //приращение угла
+
+		//Расчет скорости вращения.
+		RPM = DeltaAngle * QUANT_FOR_100mS;
+		OldAngle = Angle;
+		//Передаем данные
+		BuildAndSendTextBuf(sysTick,
+							EncoderTicks,
+							(uint32_t)(Angle*1000),
+							(uint32_t)(RPM*12)); //умножаем на 120 т.к. передаточное число редуктора 120.
+		//__enable_irq();
+	}
+	//------------------------------------------
+	// Отладка работы мотора.
+	MOTOR_AccelDecelLoop();
+	//------------------------------------------
 }
 //*******************************************************************************************
 //*******************************************************************************************

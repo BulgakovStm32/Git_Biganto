@@ -9,18 +9,20 @@
 #define I2C_ST_H
 //*******************************************************************************************
 //*******************************************************************************************
+
 #include "main.h"
 
 //*******************************************************************************************
-#define I2C_BAUD_RATE	400000   //Частота в Гц
-#define I2C_TRISE       300		 //значение в нС
-#define APB1_CLK		36000000 //Частота шины APB1 в Гц
+//*******************************************************************************************
+#define APB1_CLK		36000000U 				//Частота шины APB1 в Гц
+#define I2C_FREQ	    (APB1_CLK / 1000000U) 	//Peripheral clock frequency (MHz)
 
+#define I2C_SM_CCR		(APB1_CLK/100000U/2) 	//
+#define I2C_FM_CCR		(APB1_CLK/400000U/2) 	//
 
-
-//#define I2C_CR2_VALUE   (APB1_CLK / 1000000)
-//#define I2C_CCR_VALUE	((APB1_CLK / I2C_BAUD_RATE) / 2)
-//#define I2C_TRISE_VALUE ((1 / (I2C_TRISE * (APB1_CLK / 1000000))) + 1)
+#define I2C_SM_TRISE	37 //расчет в документации на STM32
+#define I2C_FM_TRISE	12 //
+//--------------------------
 #define I2C_WAIT_TIMEOUT	5000U
 //--------------------------
 #define I2C_MODE_READ  			1
@@ -107,9 +109,14 @@ typedef struct{
 void I2C_IT_Init(I2C_IT_t *i2c);
 
 //Обработчики прерывания
-void I2C_IT_EV_Handler(I2C_IT_t *i2cIt); //Обработчик прерывания событий I2C
-void I2C_IT_ER_Handler(I2C_IT_t *i2cIt); //Обработчик прерывания ошибок I2C
+void I2C_IT_EV_Handler(I2C_TypeDef *i2c);
+void I2C_IT_ER_Handler(I2C_TypeDef *i2c);
 
+//void I2C1_EV_Handler(void); //Обработчик прерывания событий I2C
+//void I2C1_ER_Handler(void); //Обработчик прерывания ошибок I2C
+//
+//void I2C2_EV_Handler(void); //Обработчик прерывания событий I2C
+//void I2C2_ER_Handler(void); //Обработчик прерывания ошибок I2C
 //*******************************************************************************************
 //*******************************************************************************************
 //Работа чере DMA.
@@ -131,6 +138,10 @@ void 	 I2C_DMA_Init(I2C_IT_t *i2cIt);
 uint32_t I2C_DMA_State(I2C_IT_t *i2cIt);
 uint32_t I2C_DMA_Write(I2C_IT_t *i2cIt);
 uint32_t I2C_DMA_Read (I2C_IT_t *i2cIt);
+
+//Обработчики прерывания
+void I2C1_IT_DMA_TX_Handler(void);
+void I2C1_IT_DMA_RX_Handler(void);
 //*******************************************************************************************
 //*******************************************************************************************
 #endif /* I2C_ST_H_ */

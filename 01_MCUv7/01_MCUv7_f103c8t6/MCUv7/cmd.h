@@ -18,6 +18,7 @@ typedef enum{
     cmdResetTMC                 		= 0x07, /**< сбросить чип */
     cmdResetPosition            		= 0x08, /**< сбросить позицию */
     cmdEmergencyStop            		= 0x09, /**< аварийная остановка. Актуальна при застреваниях */
+
     cmdArduinoMicroTS           		= 0x0A, /**< запросить текущее значение микросекунд таймера ардуино */
     /**@brief запомнить текущее значение таймера ардуино для последующего извлечения с помощью #cmdArduinoGetPulseCalibration */
     cmdArduinoMeasurePulseCalibration 	= 0x0B,
@@ -28,6 +29,7 @@ typedef enum{
     cmdReadTMC2130Register     	    	= 0x10, /**< прочитать значение регистра чипа tmc2130 */
     cmdWriteTMC2130Register        		= 0x11, /**< задать значение регистра чипа tmc2130 */
     cmdEnableChopper 					= 0x12, /**<  */
+
     cmdSetEncoderConstant 				= 0x13, /**< Установить константу для энкодера. */
     cmdGetEncoderConstant 				= 0x14, /**< получить константу энекодера. */
     cmdGetEncoderPosition 				= 0x15, /**< получить значение энкодера */

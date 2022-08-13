@@ -47,7 +47,7 @@
 #define FAN_EN_Toggel() 	(GPIOB->ODR ^= GPIO_ODR_ODR12)
 // PWR_BTN_LED - PB9
 #define PWR_BTN_LED_High()   (GPIOB->BSRR = GPIO_BSRR_BS9)
-#define FPWR_BTN_LED_Low()   (GPIOB->BSRR = GPIO_BSRR_BR9)
+#define PWR_BTN_LED_Low()    (GPIOB->BSRR = GPIO_BSRR_BR9)
 #define PWR_BTN_LED_Toggel() (GPIOB->ODR ^= GPIO_ODR_ODR9)
 // LAMP_PWM - PB1
 #define LAMP_PWM_High()   	(GPIOB->BSRR = GPIO_BSRR_BS1)
@@ -83,6 +83,12 @@
 #define DRV_RESET_High()   	(GPIOA->BSRR = GPIO_BSRR_BS7)
 #define DRV_RESET_Low()    	(GPIOA->BSRR = GPIO_BSRR_BR7)
 #define DRV_RESET_Toggel() 	(GPIOA->ODR ^= GPIO_ODR_ODR7)
+//**********************************************************
+// Макросы
+#define GPIO_PIN_High(gpio, pin) 	(gpio->BSRR = pin)
+#define GPIO_PIN_Low(gpio, pin)  	(gpio->BSRR = (pin<<15))
+#define GPIO_PIN_Toggel(gpio, pin)	(gpio->ODR ^= pin)
+
 //**********************************************************
 // MCU_PWR_PBN - PB7 - вход. Кнопка включения питания.
 #define MCU_PWR_BTN_GPIO	GPIOB

@@ -8,8 +8,12 @@ static volatile uint16_t GpioBState = 0; //
 static volatile uint16_t GpioCState = 0; //
 //*******************************************************************************************
 //*******************************************************************************************
+
+
+
+//**********************************************************
 //Инициализация переферии.
-void GPIO_Init (void){
+void GPIO_Init(void){
   
 	//Включаем тактирование порта A, B, C, D и модуля альтернативных функций.
 	RCC->APB2ENR |= (RCC_APB2ENR_IOPAEN |
@@ -47,8 +51,19 @@ void GPIO_Init (void){
 	//GPS_EN      - PB13
 	GPIOB->CRH &= ~(GPIO_CRH_CNF9  | GPIO_CRH_CNF12  | GPIO_CRH_CNF13); //выход, режим - push-pull.
 	GPIOB->CRH |=  (GPIO_CRH_MODE9 | GPIO_CRH_MODE12 | GPIO_CRH_MODE13);//тактирование 50МГц.
-	//--------------------
-
+	//-----------------------------------------
+	//Выводы управления драйвером мотора.
+	// /DRV_EN    - PA1
+	//  DRV_DIR   - PA4
+	// /DRV_RESET - PA7
+	GPIOA->CRL &= ~(GPIO_CRL_CNF1  | GPIO_CRL_CNF4  | GPIO_CRL_CNF7); //выход, режим - push-pull.
+	GPIOA->CRL |=  (GPIO_CRL_MODE1 | GPIO_CRL_MODE4 | GPIO_CRL_MODE7);//тактирование 50МГц.
+	// DRV_MODE2 - PC13
+	// DRV_MODE1 - PC14
+	// DRV_MODE0 - PC15
+	GPIOC->CRH &= ~(GPIO_CRH_CNF13  | GPIO_CRH_CNF14  | GPIO_CRH_CNF15); //выход, режим - push-pull.
+	GPIOC->CRH |=  (GPIO_CRH_MODE13 | GPIO_CRH_MODE14 | GPIO_CRH_MODE15);//тактирование 50МГц.
+	//-----------------------------------------
   //--------------------
   //PC13 - Led.
 //  GPIOC->CRH &= ~GPIO_CRH_CNF13;//выход, режим - push-pull.

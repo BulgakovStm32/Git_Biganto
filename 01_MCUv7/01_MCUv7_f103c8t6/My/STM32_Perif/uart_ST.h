@@ -40,7 +40,13 @@ void 		  Uart1ManagingRx(uint8_t rxState);
 void 		  Uart1StarTx(uint8_t *TxBuf, uint8_t size);
 void          Uart1DmaStarTx(uint8_t *TxBuf, uint32_t size);
 UxHandlers_t* Uart1Handler(void);
-//------------------------
+
+//********************************************************
+void USART_Init(USART_TypeDef *usart, uint32_t baudRate);
+
+
+//********************************************************
+
 //Работа с DMA. Не отлажено!!!
 void DMA1Ch4InitForTx(USART_TypeDef *usart);
 void DMA1Ch4StartTx  (uint8_t *buf, uint32_t size);

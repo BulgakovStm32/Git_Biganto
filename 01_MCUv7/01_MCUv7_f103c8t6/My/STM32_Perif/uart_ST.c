@@ -85,7 +85,7 @@ static void Usart1ClrErrFlag(void){
 }
 //**********************************************************
 //Прерывание от USART1.
-void USART1_IRQHandler(void){
+void USART1_Handler(void){
 
 	//--------------------
 	/*!< Read Data Register Not Empty */
@@ -145,6 +145,64 @@ void USART1_IRQHandler(void){
 }
 //*******************************************************************************************
 //*******************************************************************************************
+void USART_Init(USART_TypeDef *usart, uint32_t baudRate){
+
+	//--------------------
+	//Инициализация портов.
+	if(usart == USART1)
+	{
+		//PA9(U1TX), PA10(U1RX).
+		RCC->APB2ENR |= RCC_APB2ENR_IOPAEN;
+		GPIOA->CRH &= ~(GPIO_CRH_CNF9 | GPIO_CRH_CNF10);
+		GPIOA->CRH |=   GPIO_CRH_CNF9_1 | GPIO_CRH_MODE9 | //PA9(U1TX)  - выход, альтернативный режим push-pull.																							 //PA9(U1TX) - тактирование 50МГц.
+					    GPIO_CRH_CNF10_0;				   //PA10(U1RX) - Floating input.
+		RCC->APB2ENR |= RCC_APB2ENR_USART1EN;			   //Включение тактирование USART1.
+	}
+	else if(usart == USART2)
+	{
+		//PA2(U2TX), PA3(U2RX).
+		RCC->APB2ENR |= RCC_APB2ENR_IOPAEN;
+		GPIOA->CRL &= ~(GPIO_CRL_CNF2 | GPIO_CRL_CNF3);
+		GPIOA->CRL |=   GPIO_CRL_CNF2_1 | GPIO_CRL_MODE2 | //PA2(U2TX) - выход, альтернативный режим push-pull.																							 //PA9(U1TX) - тактирование 50МГц.
+				  	    GPIO_CRL_CNF3_0;				   //PA3(U2RX) - Floating input.
+		RCC->APB1ENR |= RCC_APB1ENR_USART2EN;			   //Включение тактирование USART2.
+	}
+	else if(usart == USART3)
+	{
+		//PB10(U3TX), PB11(U3RX).
+		RCC->APB2ENR |= RCC_APB2ENR_IOPBEN;
+		GPIOB->CRH &= ~(GPIO_CRH_CNF10 | GPIO_CRH_CNF11);
+		GPIOB->CRH |= GPIO_CRH_CNF10_1 | GPIO_CRH_MODE10 | //PB10(U3TX) - выход, альтернативный режим push-pull.																							 //PA9(U1TX) - тактирование 50МГц.
+					  GPIO_CRH_CNF11_0;				       //PB11(U3RX) - Floating input.
+		RCC->APB1ENR |= RCC_APB1ENR_USART3EN;			   //Включение тактирование USART3.
+	}
+	else return;
+	//--------------------
+	//Инициализация USARTx.
+	//USART1_BRR	((APB2CLK + USART_BAUD_RATE / 2) / USART_BAUD_RATE);
+	usart->BRR  = (uint32_t)((APB2CLK + baudRate / 2) / baudRate);//Set baudrate
+	usart->CR1 &= ~USART_CR1_M; 	//8 бит данных.
+	usart->CR2 &= ~USART_CR2_STOP;  //1 стоп-бит.
+	usart->CR1 |= USART_CR1_RE    | //Включение RX USART1.
+				  USART_CR1_TE    | //Включение TX USART1.
+				  USART_CR1_RXNEIE| //Включение прерывания от приемника USART1.
+				  USART_CR1_UE;     //Включение USART1.
+
+	usart->CR3 |= USART_CR3_DMAT;   //Подключение TX USART1 к DMA.
+
+
+	NVIC_SetPriority(USART1_IRQn, 15);//Приоритет прерывания USART1.
+	NVIC_EnableIRQ(USART1_IRQn);      //Разрешаем прерывание от приемника USART1.
+	//--------------------
+	//Инициализация DMA. TX USART1 работает с DMA1 Ch4.
+	RCC->AHBENR |= RCC_AHBENR_DMA1EN;//Включить тактирование DMA1
+	DMA1Ch4InitForTx(USART1);
+}
+//**********************************************************
+
+
+//*******************************************************************************************
+//*******************************************************************************************
 //Инициализация канала 4 DMA1 передачи данных через USART1.   
 void DMA1Ch4InitForTx(USART_TypeDef *usart){
   
@@ -177,7 +235,7 @@ void DMA1Ch4StartTx(uint8_t *buf, uint32_t size){
 }
 //**********************************************************
 //Прерываение от DMA1_Ch4.
-void DMA1_Channel4_IRQHandler(void){
+void DMA1_Channel4_Handler(void){
   
 	//-------------------------
 	//Если обмен завершен

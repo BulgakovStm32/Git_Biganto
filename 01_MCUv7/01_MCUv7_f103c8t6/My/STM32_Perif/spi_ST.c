@@ -25,7 +25,7 @@ void _spi_GPIO_Init(SPI_TypeDef *spi){
 		GPIOA->CRL |=  GPIO_CRL_CNF6_1;
 		GPIOA->BSRR =  GPIO_BSRR_BS6;
 		//PA7(SPI1_MOSI) - выход, альтернативный режим push-pull, тактирование 50МГц.
-		GPIOA->CRL |= GPIO_CRL_CNF7_1 | GPIO_CRL_MODE7;
+		//GPIOA->CRL |= GPIO_CRL_CNF7_1 | GPIO_CRL_MODE7;
 	}
 	else if(spi == SPI2)
 	{
@@ -55,8 +55,16 @@ void SPI_Init(SPI_TypeDef *spi){
 	//--------------------
 	spi->CR1  = 0;
 	spi->CR1 |= (SPI_CR1_MSTR |	 //режим "мастер".
-				 //Скорость. Fpclk/32 = 72MHz/16 = 4.5MHz
-				 (3 << SPI_CR1_BR_Pos) |
+				 //Скорость. Fpclk/BR = 72MHz/BR = 4.5MHz
+				 (3 << SPI_CR1_BR_Pos) | // Bits 5:3 BR[2:0]: Baud rate control
+				 	 	 	 	 	 	 // 000: fPCLK/2
+										 // 001: fPCLK/4
+										 // 010: fPCLK/8
+										 // 011: fPCLK/16
+										 // 100: fPCLK/32
+										 // 101: fPCLK/64
+										 // 110: fPCLK/128
+										 // 111: fPCLK/256
 				 //Настройки для работы с энодером.
 				 //SPI_CR1_BIDIMODE |
 				 SPI_CR1_RXONLY | // Output disabled (Receive-only mode)

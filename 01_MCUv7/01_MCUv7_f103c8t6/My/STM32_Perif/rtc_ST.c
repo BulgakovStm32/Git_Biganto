@@ -8,7 +8,7 @@
 //function инициализация RTC                                                                
 //argument none 
 //result   1 - инициализация выполнена; 0 - часы уже были инициализированы 
-void RtcInit(void){
+void RTC_Init(void){
   
  //разрешить тактирование модулей управления питанием и управлением резервной областью
   RCC->APB1ENR |= RCC_APB1ENR_PWREN | RCC_APB1ENR_BKPEN;
@@ -48,7 +48,7 @@ void RtcInit(void){
 //-----------------------------------------------------------------------------
 //function  читает счетчик RTC
 //result    текущее значение счетного регистра
-uint32_t GetCounterRTC(void){
+uint32_t RTC_GetCounter(void){
   
 //  volatile uint32_t temp;
 
@@ -62,7 +62,7 @@ uint32_t GetCounterRTC(void){
 //-----------------------------------------------------------------------------
 //function  записывает новое значение в счетчик RTC
 //argument  новое значение счетчика               
-void SetCounterRTC(uint32_t value){
+void RTC_SetCounter(uint32_t value){
   
   RTC->CRL |= RTC_CRL_CNF;    //включить режим конфигурирования
   RTC->CNTH = value>>16;      //записать новое значение счетного регистра
@@ -70,7 +70,7 @@ void SetCounterRTC(uint32_t value){
   RTC->CRL &= ~RTC_CRL_CNF;   //выйти из режима конфигурирования
 }
 //-----------------------------------------------------------------------------
-void RTC_IRQHandler(void){
+void RTC_IT_Handler(void){
   
   //причина прерывания - переполнение входного делителя (новая секунда)
   if(RTC->CRL & RTC_CRL_SECF)
@@ -94,3 +94,8 @@ void RTC_IRQHandler(void){
     }
 }
 //-----------------------------------------------------------------------------
+
+
+
+
+

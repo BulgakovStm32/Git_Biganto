@@ -13,9 +13,11 @@
 
 
 //-----------------------------------------------------------------------------
-void      RtcInit(void);
-uint32_t  GetCounterRTC(void);
-void      SetCounterRTC(uint32_t value);
+void      RTC_Init(void);
+uint32_t  RTC_GetCounter(void);
+void      RTC_SetCounter(uint32_t value);
+
+void RTC_IT_Handler(void);
 //-----------------------------------------------------------------------------
 #endif 
 

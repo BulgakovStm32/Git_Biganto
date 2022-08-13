@@ -195,8 +195,8 @@ void I2C_Master_Init(I2C_TypeDef *i2c, uint32_t remap){
 	i2c->CR1 |=  I2C_CR1_SWRST;//Программный сброс модуля I2C
 	i2c->CR1 &= ~I2C_CR1_SWRST;//Это нужно для востановления работоспособноси после КЗ на линии.
 
-	i2c->CR2  &= ~I2C_CR2_FREQ;   		  //
-	i2c->CR2  |= (36 << I2C_CR2_FREQ_Pos);//APB1 = 36MHz
+	i2c->CR2  &= ~I2C_CR2_FREQ;   		  		//
+	i2c->CR2  |= (I2C_FREQ << I2C_CR2_FREQ_Pos);//APB1 = 36MHz
 
 	//Скорость работы.
 	i2c->CCR  &= ~I2C_CCR_CCR;    //
@@ -288,14 +288,17 @@ void I2C_Slave_Init(I2C_TypeDef *i2c, uint32_t remap, uint32_t slaveAddr){
 	//i2c->CR1 |= I2C_CR1_NOSTRETCH;
 
 	//Скорость работы.
-	i2c->CR2  &= ~I2C_CR2_FREQ;   		  //
-	i2c->CR2  |= (36 << I2C_CR2_FREQ_Pos);//APB1 = 36MHz
+	i2c->CR2  &= ~I2C_CR2_FREQ;   		        //
+	i2c->CR2  |= (I2C_FREQ << I2C_CR2_FREQ_Pos);//APB1 = 36MHz
 
-	i2c->CCR  &= ~I2C_CCR_CCR;
-	i2c->CCR  |=  I2C_CCR_FS; //1 - режим FastMode(400kHz), 0 - режим STANDART(100kHz).
+	i2c->CCR   &= ~I2C_CCR_CCR;
+	i2c->CCR   |=  I2C_CCR_FS; //1 - режим FastMode(400kHz), 0 - режим STANDART(100kHz).
+	i2c->CCR   |= (I2C_FM_CCR << I2C_CCR_CCR_Pos);
+	i2c->TRISE |= (I2C_FM_TRISE << I2C_TRISE_TRISE_Pos);
+
 	//i2c->CCR   =  120;//100кГц
-	i2c->CCR   =  30; //400кГц  45;//I2C_CCR_VALUE;  //(36MHz/I2C_BAUD_RATE/2)
-	i2c->TRISE =  12; //37;//I2C_TRISE_VALUE;//(1mcs/(1/36MHz)+1)
+	//i2c->CCR   =  30; //400кГц  45;//I2C_CCR_VALUE;  //(36MHz/I2C_BAUD_RATE/2)
+	//i2c->TRISE =  12; //37;//I2C_TRISE_VALUE;//(1mcs/(1/36MHz)+1)
 
 	//i2c->CR1  |=  I2C_CR1_PE; //Включение модуля I2C1.
 }
@@ -352,7 +355,7 @@ void I2C_IT_Init(I2C_IT_t *i2cIt){
 //*******************************************************************************************
 //***************************Обработчики прерывания******************************************
 //Обработчик прерывания событий I2C
-void I2C_IT_EV_Handler(I2C_IT_t *i2cIt){
+static void I2C_IT_Event(I2C_IT_t *i2cIt){
 
 	I2C_TypeDef *i2c = i2cIt->i2c;
 	//------------------------------
@@ -475,7 +478,7 @@ void I2C_IT_EV_Handler(I2C_IT_t *i2cIt){
 }
 //**********************************************************
 //Обработчик прерывания ошибок I2C
-void I2C_IT_ER_Handler(I2C_IT_t *i2cIt){
+static void I2C_IT_Error(I2C_IT_t *i2cIt){
 
 	I2C_TypeDef *i2c = i2cIt->i2c;
 	//LedPC13Toggel();
@@ -535,28 +538,41 @@ void I2C_IT_ER_Handler(I2C_IT_t *i2cIt){
 //*******************************************************************************************
 //*******************************************************************************************
 //Обработчик прерывания событий I2C
-void I2C1_EV_IRQHandler(void){
+void I2C_IT_EV_Handler(I2C_TypeDef *i2c){
 
-	I2C_IT_EV_Handler(i2c1_IT_Define);
+	if(i2c == I2C1) I2C_IT_Event(i2c1_IT_Define);
+	else			I2C_IT_Event(i2c2_IT_Define);
 }
-//**********************************************************
 //Обработчик прерывания ошибок I2C
-void I2C1_ER_IRQHandler(void){
+void I2C_IT_ER_Handler(I2C_TypeDef *i2c){
 
-	I2C_IT_ER_Handler(i2c1_IT_Define);
+	if(i2c == I2C1) I2C_IT_Error(i2c1_IT_Define);
+	else			I2C_IT_Error(i2c2_IT_Define);
 }
 //**********************************************************
-//Обработчик прерывания событий I2C
-void I2C2_EV_IRQHandler(void){
-
-	I2C_IT_EV_Handler(i2c2_IT_Define);
-}
-//**********************************************************
-//Обработчик прерывания ошибок I2C
-void I2C2_ER_IRQHandler(void){
-
-	I2C_IT_ER_Handler(i2c2_IT_Define);
-}
+////Обработчик прерывания событий I2C
+//void I2C1_EV_Handler(void){
+//
+//	I2C_IT_EV_Handler(i2c1_IT_Define);
+//}
+////**********************************************************
+////Обработчик прерывания ошибок I2C
+//void I2C1_ER_Handler(void){
+//
+//	I2C_IT_ER_Handler(i2c1_IT_Define);
+//}
+////**********************************************************
+////Обработчик прерывания событий I2C
+//void I2C2_EV_Handler(void){
+//
+//	I2C_IT_EV_Handler(i2c2_IT_Define);
+//}
+////**********************************************************
+////Обработчик прерывания ошибок I2C
+//void I2C2_ER_Handler(void){
+//
+//	I2C_IT_ER_Handler(i2c2_IT_Define);
+//}
 //*******************************************************************************************
 //*******************************************************************************************
 //*******************************************************************************************
@@ -688,7 +704,7 @@ static void DMA_ChDisableAndITFlagClear(DMA_Channel_TypeDef *dma, uint32_t flag)
 	dma->CCR   &= ~DMA_CCR_EN;//отключение канала DMA.
 }
 //**********************************************************
-void I2C_DMA_TX_Handler(I2C_IT_t *i2cIt){
+static void I2C_DMA_TX_Handler(I2C_IT_t *i2cIt){
 
 	//-------------------------
 	//Обмен завершен.
@@ -718,7 +734,7 @@ void I2C_DMA_TX_Handler(I2C_IT_t *i2cIt){
 
 }
 //**********************************************************
-void I2C_DMA_RX_Handler(I2C_IT_t *i2cIt){
+static void I2C_DMA_RX_Handler(I2C_IT_t *i2cIt){
 
 	//-------------------------
 	//Обмен завершен.
@@ -755,7 +771,7 @@ void I2C_DMA_RX_Handler(I2C_IT_t *i2cIt){
 //*******************************************************************************************
 //*******************************************************************************************
 //I2C1_TX -> DMA1_Ch6
-void DMA1_Channel6_IRQHandler(void){
+void I2C1_IT_DMA_TX_Handler(void){
 
 	I2C_DMA_TX_Handler(i2c1_IT_Define);
 
@@ -789,7 +805,7 @@ void DMA1_Channel6_IRQHandler(void){
 }
 //**********************************************************
 //I2C1_RX -> DMA1_Ch7
-void DMA1_Channel7_IRQHandler(void){
+void I2C1_IT_DMA_RX_Handler(void){
 
 	I2C_DMA_RX_Handler(i2c1_IT_Define);
 

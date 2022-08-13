@@ -43,22 +43,27 @@ PEC   (8 бит)  CRC8 для всей транзакции.
 GetCurrentPosition              0x00  W1R15   Получить текущий угол
 GetCurrentAcceleration          0x01  W1R15   Получить текущее ускорение
 GetCurrentVelocity              0x02  W1R15   Получить текущую скорость
+
 SetTargetPosition               0x03  W5R1    Задать целевое положение
 SetMaxAcceleration              0x04  W9R1    Задать максимальное ускорение
 SetMaxVelocity                  0x05  W5R1    Задать максимальную скорость
 SetMicrostep                    0x06  W2R1    Задать микрошаг
+
 ResetTMC                        0x07  W1R1    Сбросить чип
 ResetPosition                   0x08  W1R1    Сбросить позицию
 EmergencyStop                   0x09  W1R1    Аварийная остановка. Актуальна при застреваниях
+
 ArduinoMicroTS                  0x0A  W1R5    Запросить текущее значение микросекунд таймера Ардуино
 ArduinoMeasurePulseCalibration  0x0B  W1R1    Запомнить текущее значение таймера Ардуино
 ArduinoGetPulseCalibration      0x0C  W1R9    Получить измеренное значение таймера
+
 EnableStealthChop               0x0D  W2R1    Активировать бесшумный режим
 ReadTMC4361Register             0x0E  W2R15   Прочитать значение регистра чипа tmc4361
 WriteTMC4361Register            0x0F  W6R1    Задать значение регистра чипа tmc4361
 ReadTMC2130Register             0x10  W2R15   Прочитать значение регистра чипа tmc2130
 WriteTMC2130Register            0x11  W6R1    Задать значение регистра чипа tmc2130
 EnableChopper                   0x12  W2R1
+
 SetEncoderConstant              0x13  W5R1    Установить константу для энкодера
 GetEncoderConstant              0x14  W1R15   Получить константу энкодера
 GetEncoderPosition              0x15  W1R15   Получить значение энкодера
@@ -67,6 +72,7 @@ StartEncoderPosTolCtrl          0x17  W1R1    Включение системы 
 StopEncoderPosTolCtrl           0x18  W1R1
 SetEncoderPosTol                0x19  W5R1
 GetEncoderPosTol                0x1A  W1R5
+
 StartCtrlRequestTime            0x1B  W1R1
 StopCtrlRequestTime             0x1C  W1R1
 GetMotorAndEncoderPosition      0x1D  W1R29   Прочитать положение мотора и положение энкодера

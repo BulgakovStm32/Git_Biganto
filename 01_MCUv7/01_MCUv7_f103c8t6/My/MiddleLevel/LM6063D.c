@@ -36,7 +36,8 @@ static void Lm6063LcdSendByte(uint8_t byte, uint8_t cmd){
   if(cmd) Lm6063LcdA1Hight;//данные.
   else    Lm6063LcdA1Low;  //команда.
 	
-  Spi2TxRxByte(byte);      //
+  //Spi2TxRxByte(byte);      //
+  SPI_TxRxByte(SPI2, byte);
   //HAL_SPI_Transmit(&hspi2, &byte, 1, 10);
   
   Lm6063LcdCsHight;        //Disable display controller
@@ -45,7 +46,8 @@ static void Lm6063LcdSendByte(uint8_t byte, uint8_t cmd){
 //инициализация SPI и дисплея
 void Lm6063LcdInit(void){
   
-	Spi2Init();
+	//Spi2Init();
+	SPI_Init(SPI2);
 	Lm6063LcdGpioInit();
 	
 	msDelay(5);//delay_ms(1);

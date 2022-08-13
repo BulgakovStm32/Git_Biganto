@@ -1,12 +1,12 @@
 /*
- * Encoder.h
+ * OpticSensors.h
  *
- *  Created on: 5 авг. 2022 г.
+ *  Created on: 10 авг. 2022 г.
  *      Author: belyaev
  */
 
-#ifndef MCUV7_ENCODER_H_
-#define MCUV7_ENCODER_H_
+#ifndef MCUV7_OPTICSENSORS_H
+#define MCUV7_OPTICSENSORS_H
 //*******************************************************************************************
 //*******************************************************************************************
 
@@ -14,22 +14,24 @@
 
 //*******************************************************************************************
 //*******************************************************************************************
-#define ENCODER_SPI		SPI1
-
-typedef enum {
-	ENCODER_NO_INIT = 0,
-	ENCODER_READY,
-}EncoderState_t;
+//SENS_LED    - PB6 - выход
+#define	SENS_LED_GPIO		GPIOB
+#define SENS_LED_PIN		GPIO_ODR_ODR6
+//SENS_LENS_E - PB3 - вход
+#define	SENS_LENS_E_GPIO	GPIOB
+#define SENS_LENS_E_PIN		GPIO_IDR_IDR3
+//SENS_BAT_E  - PB4 - вход
+#define	SENS_BAT_E_GPIO		GPIOB
+#define SENS_BAT_E_PIN		GPIO_IDR_IDR4
+//*******************************************************************************************
+//*******************************************************************************************
+void 	 OPT_SENS_Init(void);
+void 	 OPT_SENS_CheckLoop(void);
+uint32_t OPT_SENS_GetState(uint32_t sens);
 
 //*******************************************************************************************
 //*******************************************************************************************
-void 	 ENCODER_Init(void);
-uint32_t ENCODER_GetVal(void);
+#endif /* MCUV7_OPTICSENSORS_H_ */
 
-void 	 ENCODER_SetEncoderConstant(uint32_t value);
-uint32_t ENCODER_GetEncoderConstant(void);
-float 	 ENCODER_GetEncoderPosition(void);
 
-//*******************************************************************************************
-//*******************************************************************************************
-#endif /* MCUV7_ENCODER_H_ */
+
