@@ -48,30 +48,18 @@ void TIM1_Init(void){
 	RCC->APB2ENR |= RCC_APB2ENR_TIM1EN;
 	//Прескаллер.
 	//APB2_CLK = 72MHz, TIM1_CLK = APB2_CLK * 1 = 72MHz.
-	TIM1->PSC = 18-1;//таймер будет тактироваться с частотой 72МГц/(PSC - 1).
-	//Auto reload register. - это значение, до которого будет считать таймер.
-	TIM1->ARR = 3;
+	TIM1->PSC  = 72-1;		  //таймер будет тактироваться с частотой 72МГц/(PSC - 1).
+	TIM1->ARR  = 100-1; 	  //Auto reload register. - это значение, до которого будет считать таймер.
+	TIM1->CR1 |= TIM_CR1_ARPE;//Auto-reload preload enable
 
-	TIM1->DIER |= TIM_DIER_UIE; //Update interrupt enable
-	TIM1->CR1   = TIM_CR1_ARPE ;//Auto-reload preload enable
+	//Настройка прерываний.
+	TIM1->CR1  |= TIM_CR1_URS; //Update Request Source
+	TIM1->EGR  |= TIM_EGR_UG;  //Update generation
+	TIM1->DIER |= TIM_DIER_UIE;//Update interrupt enable
+
 	//Разрешение прерывания от TIM4.
-	NVIC_SetPriority(TIM1_UP_IRQn, 5);
+	NVIC_SetPriority(TIM1_UP_IRQn, 15);
 	NVIC_EnableIRQ(TIM1_UP_IRQn);
-
-//	//Задаем режим работы - PWM mode 1 on OC1
-//	TIM1->CCMR1 |= TIM_CCMR1_OC2M_2 | TIM_CCMR1_OC2M_1 | //OC1M: Output compare 1 mode - 110: PWM mode 1.
-//				   TIM_CCMR1_OC2PE;						 //OC1PE: Output compare 1 preload enable. 1: Preload register on TIMx_CCR1 enabled.
-//	//Enable CC1 - включение первого канала
-//	TIM1->CCER |= TIM_CCER_CC2E;
-//	//Main output enable.
-//	TIM1->BDTR |= TIM_BDTR_AOE;
-//
-//	//Настройка ножки микроконтроллера.
-//	//Используется порт PA9(TIM1_CH2)
-//	RCC->APB2ENR |= RCC_APB2ENR_IOPAEN;
-//
-//	GPIOA->CRH |= GPIO_CRH_CNF9_1;//PA9(TIM1_CH2) - выход, альтернативный режим push-pull.
-//	GPIOA->CRH |= GPIO_CRH_MODE9; //PA9(TIM1_CH2) - тактирование 50МГц.
 
 	//Включение таймера
 	TIM1->CR1 |= TIM_CR1_CEN;//CEN: Counter enable

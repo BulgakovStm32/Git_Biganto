@@ -404,8 +404,9 @@ void EXTI9_5_IRQHandler(void) {}
 * Output         : None
 * Return         : None
 *******************************************************************************/
-void TIM1_BRK_IRQHandler(void)
-{}
+void TIM1_BRK_IRQHandler(void){
+
+}
 
 /*******************************************************************************
 * Function Name  : TIM1_UP_IRQHandler
@@ -415,8 +416,12 @@ void TIM1_BRK_IRQHandler(void)
 * Output         : None
 * Return         : None
 *******************************************************************************/
-void TIM1_UP_IRQHandler(void)
-{}
+void TIM1_UP_IRQHandler(void){
+
+//	TIM1->SR &= ~TIM_SR_UIF;//Сброс флага прерывания.
+//	LED_ACT_Toggel();
+//	MOTOR_AccelDecelLoop();
+}
 
 /*******************************************************************************
 * Function Name  : TIM1_TRG_COM_IRQHandler
@@ -426,8 +431,9 @@ void TIM1_UP_IRQHandler(void)
 * Output         : None
 * Return         : None
 *******************************************************************************/
-void TIM1_TRG_COM_IRQHandler(void)
-{}
+void TIM1_TRG_COM_IRQHandler(void){
+
+}
 
 /*******************************************************************************
 * Function Name  : TIM1_CC_IRQHandler
@@ -436,7 +442,9 @@ void TIM1_TRG_COM_IRQHandler(void)
 * Output         : None
 * Return         : None
 *******************************************************************************/
-void TIM1_CC_IRQHandler(void) {}
+void TIM1_CC_IRQHandler(void){
+
+}
 
 /*******************************************************************************
 * Function Name  : TIM2_IRQHandler

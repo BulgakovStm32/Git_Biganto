@@ -34,11 +34,12 @@ typedef enum {
 	MOTOR_BUSY,
 }MotorState_t;
 //-----------------------------------
-#define MOTOR_FREQ_TIM_Hz 		1000000U //частота тактироваия базового таймера
-#define MOTOR_QUANT_TIME		1 		 //период в мс расчета значений скорости ускорения/замедлениия
-#define MOTOR_STEPS_PER_TURN	200		 //количество шагов мотора на один оборот
+#define MOTOR_FREQ_TIM_Hz 			1000000U //частота тактироваия базового таймера
+#define MOTOR_QUANT_TIME_mS			1 		 //период в мС расчета значений скорости ускорения/замедлениия
 
-#define MOTOR_ONE_STEP_DEGREE	1.8f	 //на столько градусов повернетсвал мотора за один шаг.
+#define MOTOR_ONE_FULL_STEP_DEGREE	1.8f	 //на столько градусов повернетсвал мотора за один шаг.
+#define MOTOR_FULL_STEPS_PER_TURN	(uint32_t)(360.0 / MOTOR_ONE_FULL_STEP_DEGREE)
+//#define MOTOR_FULL_STEPS_PER_TURN	200		 //количество шагов мотора на один оборот
 
 //*******************************************************************************************
 //*******************************************************************************************
@@ -57,9 +58,10 @@ void MOTOR_SetMaxVelocity(uint32_t vel_rpm);
 void MOTOR_ResetDrv(void);
 void MOTOR_ResetPosition(void);
 //-----------------------------------
-void MOTOR_CalculateAccelDecel(uint32_t Vstart_rpm, uint32_t Vmax_rpm, uint32_t timeAccel_ms);
-void MOTOR_SpinStart(MotorState_t spinMode);
-void MOTOR_AccelDecelLoop(void);
+uint32_t MOTOR_CalcAccelMaxToAccelTime(uint32_t Vmax_rpm, uint32_t Accel);
+void	 MOTOR_CalcAccelDecel(uint32_t Vstart_rpm, uint32_t Vmax_rpm, uint32_t timeAccel_ms);
+void 	 MOTOR_SpinStart(MotorState_t spinMode);
+void 	 MOTOR_AccelDecelLoop(void);
 
 
 //*******************************************************************************************

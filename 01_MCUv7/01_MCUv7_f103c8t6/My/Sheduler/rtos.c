@@ -89,9 +89,9 @@ void RTOS_SetTask(void(*taskFunc)(void), uint32_t taskDelay, uint32_t taskPeriod
  */
 void RTOS_DeleteTask(void(*taskFunc)(void)){
 
-	for(uint32_t i=0; i < ArrayTail; i++) //проходим по списку задач
+	for(uint32_t i=0; i < ArrayTail; i++)  //проходим по списку задач
 	{
-		if(TaskArray[i].pFunc == taskFunc) // если задача в списке найдена
+		if(TaskArray[i].pFunc == taskFunc) //если задача в списке найдена
 		{
 			_disableInterrupt();  //Глобальное запрещение прерываний.
 			if(i != (ArrayTail-1))//переносим последнюю задачу на место удаляемой

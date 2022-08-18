@@ -17,36 +17,36 @@
 //Функция задержки в микросекундах.
 __STATIC_INLINE void _OneWire_usDelay(uint32_t us){
 
-	microDelay(us);
+	MICRO_DELAY(us);
 
 //	us *= 4;  //Эти цифры подобраны эмпирическим путем для Fclk=72MHz.
 //	us += 4;
 //	while(us--);
 }
 //**********************************************************
-static void _OneWire_GpioInit(GPIO_TypeDef *const port, uint32_t pin){
-
-	//Включение тактирования портов.
-		 if(port == GPIOA) RCC->APB2ENR |= RCC_APB2ENR_IOPAEN;
-	else if(port == GPIOB) RCC->APB2ENR |= RCC_APB2ENR_IOPBEN;
-	else if(port == GPIOC) RCC->APB2ENR |= RCC_APB2ENR_IOPCEN;
-	else return;
-	//Конфигурация выводы в режим 50MHz output open-drain.
-	if(pin <= 7)
-	{
-		pin = pin * 4;
-		port->CRL |=  (0X03 << pin) |         //MODEy[1:0] - 11: Output mode, max speed 50 MHz
-					  (0X01 << (0X02 << pin));//CNFy[1:0]  - 01: General purpose output Open-drain
-		port->CRL &= ~(0x02 << (0x02 << pin));//
-	}
-	else
-	{
-		pin = (pin - 8) * 4;
-		port->CRH |=  (0x03 << pin) |         //MODEy[1:0] - 11: Output mode, max speed 50 MHz
-					  (0x01 << (0x02 << pin));//CNFy[1:0]  - 01: General purpose output Open-drain
-		port->CRH &= ~(0x02 << (0x02 << pin));//
-	}
-}
+//static void _OneWire_GpioInit(GPIO_TypeDef *const port, uint32_t pin){
+//
+//	//Включение тактирования портов.
+//		 if(port == GPIOA) RCC->APB2ENR |= RCC_APB2ENR_IOPAEN;
+//	else if(port == GPIOB) RCC->APB2ENR |= RCC_APB2ENR_IOPBEN;
+//	else if(port == GPIOC) RCC->APB2ENR |= RCC_APB2ENR_IOPCEN;
+//	else return;
+//	//Конфигурация выводы в режим 50MHz output open-drain.
+//	if(pin <= 7)
+//	{
+//		pin = pin * 4;
+//		port->CRL |=  (0X03 << pin) |         //MODEy[1:0] - 11: Output mode, max speed 50 MHz
+//					  (0X01 << (0X02 << pin));//CNFy[1:0]  - 01: General purpose output Open-drain
+//		port->CRL &= ~(0x02 << (0x02 << pin));//
+//	}
+//	else
+//	{
+//		pin = (pin - 8) * 4;
+//		port->CRH |=  (0x03 << pin) |         //MODEy[1:0] - 11: Output mode, max speed 50 MHz
+//					  (0x01 << (0x02 << pin));//CNFy[1:0]  - 01: General purpose output Open-drain
+//		port->CRH &= ~(0x02 << (0x02 << pin));//
+//	}
+//}
 //**********************************************************
 //Процедура инициализации: импульсы сброса и присутствия
 static uint32_t _OneWire_Initialization(GPIO_TypeDef *const port, uint32_t pin){
@@ -137,16 +137,12 @@ static uint32_t _OneWire_ReadData(GPIO_TypeDef *const port, uint32_t pin, uint32
 //**********************************************************
 static void DS18B20_ReadTemperature(DS18B20_t *sensor){
 
-	uint32_t data = 0;
+	uint32_t data;
 	//---------------------
 	__disable_irq();
-
 	//Чтение 16 бит из DS18B20
-//	for(uint32_t i = 0; i < 16; i++)
-//	{
-//		data |= (uint32_t)(_OneWire_ReadBit(sensor->GPIO_PORT, sensor->GPIO_PIN) << i);
-//	}
 	data = _OneWire_ReadData(sensor->GPIO_PORT, sensor->GPIO_PIN, 16);
+	__enable_irq();
 	//Отрицательная температура.
 	if(data & 0x0000F800)
 	{
@@ -155,8 +151,6 @@ static void DS18B20_ReadTemperature(DS18B20_t *sensor){
 		data &= 0x00000FFF;//Маска для выделения 12 бит.
 	}
 	else sensor->TemperatureSign = DS18B20_SIGN_POSITIVE;
-
-	__enable_irq();
 	//Расчет температуры
 	sensor->Temperature = (uint32_t)(((data * 625) + 500) / 1000);
 }
@@ -276,7 +270,8 @@ static void DS18B20_ReadTemperature(DS18B20_t *sensor){
 //*******************************************************************************************
 void TemperatureSens_GpioInit(DS18B20_t *sensor){
 
-	_OneWire_GpioInit(sensor->GPIO_PORT, sensor->GPIO_PIN);
+	//_OneWire_GpioInit(sensor->GPIO_PORT, sensor->GPIO_PIN);
+	GPIO_InitForOutputOpenDrain(sensor->GPIO_PORT, sensor->GPIO_PIN);
 }
 //**********************************************************
 void TemperatureSens_SetResolution(DS18B20_t *sensor){

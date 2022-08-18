@@ -30,26 +30,26 @@ void msDelay(volatile uint32_t del){
 #define TACTS_FOR_MICROSEC 72 //(SYS_CORE_CLOCK/1000000U)
 
 //**********************************************************
-void microDelay_Init(void){
+void MICRO_DELAY_Init(void){
 
 	CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk; // разрешаем использовать счётчик
 	DWT->CTRL        |= DWT_CTRL_CYCCNTENA_Msk;     // запускаем счётчик
 }
 //**********************************************************
-uint32_t micro(void){
+uint32_t MICRO_DELAY_GetCount(void){
 
 	return (DWT->CYCCNT / TACTS_FOR_MICROSEC);
 	//return DWT->CYCCNT ;
 }
 //**********************************************************
-void microDelay(uint32_t uS){
+void MICRO_DELAY(uint32_t microSec){
 
 //    uint32_t uS_count_tic = uS * TACTS_FOR_MICROSEC;// получаем кол-во тактов за 1 мкс и умножаем на наше значение
 //    DWT->CYCCNT = 0U; // обнуляем счётчик
 //    while(DWT->CYCCNT < uS_count_tic);
 
-    uint32_t old = micro();
-    while((micro() - old) < uS);
+    uint32_t old = MICRO_DELAY_GetCount();
+    while((MICRO_DELAY_GetCount() - old) < microSec);
 }
 //*******************************************************************************************
 //*******************************************************************************************

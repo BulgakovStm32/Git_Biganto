@@ -8,7 +8,62 @@ static volatile uint16_t GpioBState = 0; //
 static volatile uint16_t GpioCState = 0; //
 //*******************************************************************************************
 //*******************************************************************************************
+static uint32_t _gpio_PortXClockEnable(GPIO_TypeDef *port){
 
+	//Включение тактирования портов.
+		 if(port == GPIOA) RCC->APB2ENR |= RCC_APB2ENR_IOPAEN;
+	else if(port == GPIOB) RCC->APB2ENR |= RCC_APB2ENR_IOPBEN;
+	else if(port == GPIOC) RCC->APB2ENR |= RCC_APB2ENR_IOPCEN;
+	else return 0;
+		 return 1;
+}
+//*******************************************************************************************
+//*******************************************************************************************
+void GPIO_InitForOutputOpenDrain(GPIO_TypeDef *port, uint32_t pin){
+
+	//Включение тактирования портов.
+	if(!_gpio_PortXClockEnable(port)) return;
+	//Конфигурация выводы в режим 50MHz output open-drain.
+	if(pin <= 7)
+	{
+		pin = pin * 4;
+		port->CRL |=  (0X03 << pin) |         //MODEy[1:0] - 11: Output mode, max speed 50 MHz
+					  (0X01 << (0X02 << pin));//CNFy[1:0]  - 01: General purpose output Open-drain
+		port->CRL &= ~(0x02 << (0x02 << pin));//
+	}
+	else
+	{
+		pin = (pin - 8) * 4;
+		port->CRH |=  (0x03 << pin) |         //MODEy[1:0] - 11: Output mode, max speed 50 MHz
+					  (0x01 << (0x02 << pin));//CNFy[1:0]  - 01: General purpose output Open-drain
+		port->CRH &= ~(0x02 << (0x02 << pin));//
+	}
+}
+//**********************************************************
+void GPIO_InitForInputPullUp(GPIO_TypeDef *port, uint32_t pin){
+
+	//Включение тактирования портов.
+	if(!_gpio_PortXClockEnable(port)) return;
+	//Конфигурация выводов: Input with pull-up.
+	if(pin <= 7)
+	{
+		pin = pin * 4;
+		port->CRL &= ~(0x03 << pin);//GPIO_CRL_MODEx - 00:Input mode (reset state)
+		//CNFy[1:0]: 10 - Input with pull-up / pull-down.
+		port->CRL &= ~(0x03 << (pin + 2));
+		port->CRL |=  (0x02 << (pin + 2));
+	}
+	else
+	{
+		pin = (pin - 8) * 4;
+		port->CRH &= ~(0x03 << pin);//GPIO_CRL_MODEx - 00:Input mode (reset state)
+		//CNFy[1:0]: 10 - Input with pull-up / pull-down.
+		port->CRH &= ~(0x03 << (pin + 2));
+		port->CRH |=  (0x02 << (pin + 2));
+	}
+	port->ODR |= (1 << pin); //pull-up.
+}
+//**********************************************************
 
 
 //**********************************************************
@@ -17,10 +72,10 @@ void GPIO_Init(void){
   
 	//Включаем тактирование порта A, B, C, D и модуля альтернативных функций.
 	RCC->APB2ENR |= (RCC_APB2ENR_IOPAEN |
-				   RCC_APB2ENR_IOPBEN |
-				   RCC_APB2ENR_IOPCEN |
-				   RCC_APB2ENR_IOPDEN |
-				   RCC_APB2ENR_AFIOEN);
+				   	 RCC_APB2ENR_IOPBEN |
+				     RCC_APB2ENR_IOPCEN |
+				     RCC_APB2ENR_IOPDEN |
+				     RCC_APB2ENR_AFIOEN);
 	//Отключение JTAG-D от порта PA15, отладка через SWD активна.
 	AFIO->MAPR |= AFIO_MAPR_SWJ_CFG_JTAGDISABLE;
 	//--------------------
@@ -168,7 +223,7 @@ void GPIO_CheckLoop(void){
     }
 }
 //**********************************************************
-uint32_t GPIO_GetState(GPIO_TypeDef *port){
+uint32_t GPIO_GetPortState(GPIO_TypeDef *port){
 
 	     if(port == GPIOA) return GpioAState;
 	else if(port == GPIOB) return GpioBState;

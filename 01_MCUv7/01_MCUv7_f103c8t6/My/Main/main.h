@@ -38,6 +38,7 @@
 #include "Delay.h"
 #include "Blink.h"
 #include "DS18B20.h"
+#include "Buttons.h"
 
 #include "LcdGraphic.h"
 //#include "Lcd_i2c_1602.h"

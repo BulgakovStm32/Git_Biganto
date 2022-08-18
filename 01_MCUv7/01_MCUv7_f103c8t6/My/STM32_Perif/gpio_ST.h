@@ -112,9 +112,12 @@
 
 //*******************************************************************************************
 //*******************************************************************************************
+void GPIO_InitForOutputOpenDrain(GPIO_TypeDef *port, uint32_t pin);
+void GPIO_InitForInputPullUp(GPIO_TypeDef *port, uint32_t pin);
+
 void     GPIO_Init     (void);
 void     GPIO_CheckLoop(void);
-uint32_t GPIO_GetState(GPIO_TypeDef *port);
+uint32_t GPIO_GetPortState(GPIO_TypeDef *port);
 uint32_t GPIO_GetPinState(GPIO_TypeDef *port, uint32_t pin);
 
 //*******************************************************************************************
