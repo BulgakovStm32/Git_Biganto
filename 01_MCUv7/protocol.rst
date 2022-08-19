@@ -40,13 +40,13 @@ PEC   (8 бит)  CRC8 для всей транзакции.
 ==============================  ====  ======  ========================================================
 Команда                          ID   Размер  Описание
 ==============================  ====  ======  ========================================================
-GetCurrentPosition              0x00  W1R15   Получить текущий угол
-GetCurrentAcceleration          0x01  W1R15   Получить текущее ускорение
-GetCurrentVelocity              0x02  W1R15   Получить текущую скорость
+GetCurrentPosition              0x00  W1R15   Получить текущий угол		 ()
+GetCurrentAcceleration          0x01  W1R15   Получить текущее ускорение ()
+GetCurrentVelocity              0x02  W1R15   Получить текущую скорость  ()
 
-SetTargetPosition               0x03  W5R1    Задать целевое положение
-SetMaxAcceleration              0x04  W9R1    Задать максимальное ускорение
-SetMaxVelocity                  0x05  W5R1    Задать максимальную скорость
+SetTargetPosition               0x03  W5R1    Задать целевое положение		(???)
+SetMaxAcceleration              0x04  W9R1    Задать максимальное ускорение (pps/s^2)
+SetMaxVelocity                  0x05  W5R1    Задать максимальную скорость	(RPM)
 SetMicrostep                    0x06  W2R1    Задать микрошаг
 
 ResetTMC                        0x07  W1R1    Сбросить чип

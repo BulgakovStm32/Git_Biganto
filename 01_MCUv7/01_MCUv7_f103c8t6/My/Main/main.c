@@ -61,33 +61,16 @@ void Task_STM32_Slave_Read(void){
 void Task_Temperature_Read(void){
 
 	TemperatureSens_ReadTemperature(&Sensor_1);
-	I2cWire.pTxBuf[0] = (uint8_t) Sensor_1.TemperatureSign;
-	I2cWire.pTxBuf[1] = (uint8_t)(Sensor_1.Temperature >> 8);
-	I2cWire.pTxBuf[2] = (uint8_t) Sensor_1.Temperature;
+//	I2cWire.pTxBuf[0] = (uint8_t) Sensor_1.TemperatureSign;
+//	I2cWire.pTxBuf[1] = (uint8_t)(Sensor_1.Temperature >> 8);
+//	I2cWire.pTxBuf[2] = (uint8_t) Sensor_1.Temperature;
 
 	TemperatureSens_ReadTemperature(&Sensor_2);
-	I2cWire.pTxBuf[3] = (uint8_t) Sensor_2.TemperatureSign;
-	I2cWire.pTxBuf[4] = (uint8_t)(Sensor_2.Temperature >> 8);
-	I2cWire.pTxBuf[5] = (uint8_t) Sensor_2.Temperature;
+//	I2cWire.pTxBuf[3] = (uint8_t) Sensor_2.TemperatureSign;
+//	I2cWire.pTxBuf[4] = (uint8_t)(Sensor_2.Temperature >> 8);
+//	I2cWire.pTxBuf[5] = (uint8_t) Sensor_2.Temperature;
 
-//	TemperatureSens_ReadTemperature(&Sensor_3);
-//	I2cWire.pTxBuf[6] = (uint8_t) Sensor_3.TemperatureSign;
-//	I2cWire.pTxBuf[7] = (uint8_t)(Sensor_3.Temperature >> 8);
-//	I2cWire.pTxBuf[8] = (uint8_t) Sensor_3.Temperature;
-
-//	I2cWire.pTxBuf[9] = 0xC9;
-//
-	I2cWire.txBufSize = 9;
-
-//	LED_ACT_Toggel();
-
-//	static uint32_t usartBuf = 0x87654321;
-//	DMA1Ch4StartTx((uint8_t*)&usartBuf, 4);
-
-
-
-	uint32_t adcTemp = 0;
-	adcTemp = ADC_GetMeas(ADC_DC_IN_DIV_CH);
+//	I2cWire.txBufSize = 9;
 }
 //************************************************************
 //ф-я вызыввается каждые 100мс.
@@ -115,14 +98,14 @@ void Task_PwrButtonPolling(void){
 //*******************************************************************************************
 void I2cRxParsing(void){
 
-	static volatile uint32_t spiData = 0;
-
+	//static volatile uint32_t spiData = 0;
+	//Разбор пришедшего запроса
 	switch(I2cWire.pRxBuf[0])
 	{
 		//-------------------
 		case(cmdGetCurrentPosition):
 				//LED_ACT_Toggel();
-				spiData = ENCODER_GetVal();
+				//spiData = ENCODER_GetVal();
 		break;
 		//-------------------
 		case(cmdGetCurrentAcceleration):
@@ -173,6 +156,26 @@ void I2cRxParsing(void){
 				//LED_ACT_Toggel();
 		break;
 		//-------------------
+		//-------------------
+		//Это команда передается из эмитатора для отладки протакола.
+		case(cmdGetTemperature):
+				LED_ACT_Toggel();
+		if(I2cWire.pRxBuf[2] == 1)//Запрос для первого датчика температуры
+		{
+			I2cWire.pTxBuf[0] = (uint8_t) Sensor_1.TemperatureSign;
+			I2cWire.pTxBuf[1] = (uint8_t)(Sensor_1.Temperature >> 8);
+			I2cWire.pTxBuf[2] = (uint8_t) Sensor_1.Temperature;
+		}
+		else if(I2cWire.pRxBuf[2] == 2)//Запрос для второго датчика температуры
+		{
+			I2cWire.pTxBuf[3] = (uint8_t) Sensor_2.TemperatureSign;
+			I2cWire.pTxBuf[4] = (uint8_t)(Sensor_2.Temperature >> 8);
+			I2cWire.pTxBuf[5] = (uint8_t) Sensor_2.Temperature;
+		}
+		I2cWire.txBufSize = 6;//Кол-во байтов в ответе. По протоколу.
+		break;
+		//-------------------
+		//-------------------
 		default:
 
 		break;
@@ -181,8 +184,6 @@ void I2cRxParsing(void){
 }
 //************************************************************
 void I2cTxParsing(void){
-
-//	LED_ACT_Toggel();
 
 }
 //*******************************************************************************************
@@ -296,10 +297,7 @@ int main(void){
 	PwrButton.State		= BUTTON_RELEASE;
 	BUTTON_Init(&PwrButton);
 	//***********************************************
-
-	//SysTick_Init();
 	MICRO_DELAY(100000);	//100mS - Эта задержка нужна для стабилизации напряжения патания.
-	//***********************************************
 	//Включение питания платы.
 //	while(BUTTON_GetState(&PwrButton) != BUTTON_RELEASE){};//Пока кнопку не отпустя плата не включится.
 //	{
@@ -308,9 +306,10 @@ int main(void){
 
 	MCU_EN_High();
 	FAN_EN_High();
+	GPS_EN_High();
+
 //	LIDAR_EN_High();
 //	LAMP_PWM_High();
-//	GPS_EN_High();
 
 	MICRO_DELAY(500000);//Эта задержка нужна для стабилизации напряжения патания.
 	//***********************************************
@@ -365,6 +364,7 @@ int main(void){
 	//RTOS_SetTask(Task_STM32_Slave_Write,0, 500);
 	//RTOS_SetTask(Task_STM32_Slave_Read, 0, 500);
 	//***********************************************
+	SysTick_Init();
 	__enable_irq();
 	//**************************************************************
 	while(1)

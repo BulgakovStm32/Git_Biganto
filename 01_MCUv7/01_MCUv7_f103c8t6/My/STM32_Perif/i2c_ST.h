@@ -15,13 +15,21 @@
 //*******************************************************************************************
 //*******************************************************************************************
 #define APB1_CLK		36000000U 				//Частота шины APB1 в Гц
-#define I2C_FREQ	    (APB1_CLK / 1000000U) 	//Peripheral clock frequency (MHz)
+#define I2C_FREQ	    (APB1_CLK / 1000000U)	//Peripheral clock frequency (MHz)
 
-#define I2C_SM_CCR		(APB1_CLK/100000U/2) 	//
-#define I2C_FM_CCR		(APB1_CLK/400000U/2) 	//
+//Sm mode or SMBus:
+//TPCLK1 = 27,7777 ns
+//CCR    = 1000nS/ (2 * TPCLK1)
+//TRISE  = (1000nS/TPCLK1)
+#define I2C_SM_CCR		180 //(10000U / (2 * TPCLK1))
+#define I2C_SM_TRISE	36  //(1000U  / TPCLK1)
 
-#define I2C_SM_TRISE	37 //расчет в документации на STM32
-#define I2C_FM_TRISE	12 //
+//Fm mode:
+//TPCLK1 = 27,7777 ns
+//CCR    = 2500nS/ (3 * TPCLK1)
+//TRISE  = (300nS/TPCLK1)
+#define I2C_FM_CCR		30 //(2500U / (3 * TPCLK1))
+#define I2C_FM_TRISE	12 //(300U  / TPCLK1)
 //--------------------------
 #define I2C_WAIT_TIMEOUT	5000U
 //--------------------------
