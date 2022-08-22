@@ -30,6 +30,7 @@
 #include "rtos.h"
 //-------------------------
 #include "cmd.h"
+#include "Protocol_I2C.h"
 #include "Encoder.h"
 #include "Motor.h"
 #include "OpticSensors.h"

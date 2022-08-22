@@ -58,9 +58,14 @@ uint32_t ENCODER_GetEncoderConstant(void){
 	return encoderConstant;
 }
 //**********************************************************
-float ENCODER_GetEncoderPosition(void){
+void ENCODER_GetEncoderPosition(uint8_t *buf){
 
-	return 0;//(ENCODER_GetVal() * );
+	uint32_t encoder = ENCODER_GetVal();
+
+	buf[0] = (uint8_t) encoder;
+	buf[1] = (uint8_t)(encoder >> 8);
+	buf[2] = (uint8_t)(encoder >> 16);
+	buf[3] = (uint8_t)(encoder >> 24);
 }
 //**********************************************************
 

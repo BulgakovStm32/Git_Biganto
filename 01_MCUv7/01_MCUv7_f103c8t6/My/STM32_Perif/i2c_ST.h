@@ -82,8 +82,9 @@ void I2C_Slave_Init(I2C_TypeDef *i2c, uint32_t remap, uint32_t slaveAddr);
 #define I2C_IT_RX_BUF_LEN_MAX	32
 #define I2C_IT_TX_BUF_LEN_MAX	32
 
-//--------------------------
+//****************************************************
 //Структура контекста для работы с портом I2C по прерываниям.
+#pragma pack(push, 1)//размер выравнивания в 1 байт
 typedef struct{
 	I2C_TypeDef *i2c;
 	uint32_t 	i2cMode;		// Master или Slave
@@ -98,23 +99,28 @@ typedef struct{
 								// в режиме Slave  - ???
 
 	//uint8_t 	*pTxBuf;		// указатель на буфер передачи.
-	uint8_t 	pTxBuf[I2C_IT_TX_BUF_LEN_MAX];		// буфер передачи.
+	uint8_t 	pTxBuf[I2C_IT_TX_BUF_LEN_MAX]; // буфер передачи.
 	uint32_t 	txBufSize;		// размер буфера передачи
 	uint32_t	txBufIndex;		// индекс буфера передачи.
 
 	//uint8_t 	*pRxBuf;		// указатель на буфер приема.
-	uint8_t 	pRxBuf[I2C_IT_RX_BUF_LEN_MAX];		// буфер приема.
+	uint8_t 	pRxBuf[I2C_IT_RX_BUF_LEN_MAX]; // буфер приема.
 	uint32_t 	rxBufSize;		// размер буфера приема.
 	uint32_t	rxBufIndex;		// индекс буфера приема.
 
-	void(*i2cRxCallback)(void);
-	void(*i2cTxCallback)(void);
+	void(*i2cRxCallback)(void); //
+	void(*i2cTxCallback)(void); //
 
 }I2C_IT_t;
-//--------------------------
-
+#pragma pack(pop)//вернули предыдущую настройку.
 //*******************************************************************************************
-void I2C_IT_Init(I2C_IT_t *i2c);
+void 	 I2C_IT_Init(I2C_IT_t *i2c);
+
+uint8_t* I2C_IT_GetpTxBuf(I2C_IT_t *i2cIt);
+void 	 I2C_IT_SetTxSize(I2C_IT_t *i2cIt, uint32_t size);
+
+uint8_t* I2C_IT_GetpRxBuf(I2C_IT_t *i2cIt);
+
 
 //Обработчики прерывания
 void I2C_IT_EV_Handler(I2C_TypeDef *i2c);

@@ -41,36 +41,10 @@ uint32_t Led_Blink(uint32_t millis, uint32_t period, uint32_t switch_on_time){
 
 //*******************************************************************************************
 //*******************************************************************************************
-
-//static uint8_t txBuf[32] = {0};
-//static uint8_t rxBuf[32] = {0};
-//************************************************************
-void Task_STM32_Slave_Write(void){
-
-//	txBuf[0]++;
-//	txBuf[1] = txBuf[0] + 1;
-//	txBuf[2] = txBuf[1] + 1;
-//	txBuf[3] = txBuf[2] + 1;
-}
-//************************************************************
-void Task_STM32_Slave_Read(void){
-
-//	LedPC13Toggel();
-}
-//************************************************************
-void Task_Temperature_Read(void){
+void Task_ReadTemperature(void){
 
 	TemperatureSens_ReadTemperature(&Sensor_1);
-//	I2cWire.pTxBuf[0] = (uint8_t) Sensor_1.TemperatureSign;
-//	I2cWire.pTxBuf[1] = (uint8_t)(Sensor_1.Temperature >> 8);
-//	I2cWire.pTxBuf[2] = (uint8_t) Sensor_1.Temperature;
-
 	TemperatureSens_ReadTemperature(&Sensor_2);
-//	I2cWire.pTxBuf[3] = (uint8_t) Sensor_2.TemperatureSign;
-//	I2cWire.pTxBuf[4] = (uint8_t)(Sensor_2.Temperature >> 8);
-//	I2cWire.pTxBuf[5] = (uint8_t) Sensor_2.Temperature;
-
-//	I2cWire.txBufSize = 9;
 }
 //************************************************************
 //ф-я вызыввается каждые 100мс.
@@ -98,9 +72,12 @@ void Task_PwrButtonPolling(void){
 //*******************************************************************************************
 void I2cRxParsing(void){
 
-	//static volatile uint32_t spiData = 0;
+	MCU_RequestPack_t  *request  = (MCU_RequestPack_t *) I2C_IT_GetpRxBuf(&I2cWire);
+	MCU_ResponsePack_t *response = (MCU_ResponsePack_t *)I2C_IT_GetpTxBuf(&I2cWire);
+	//--------------------------
+	LED_ACT_Toggel();//Отладка
 	//Разбор пришедшего запроса
-	switch(I2cWire.pRxBuf[0])
+	switch(request->Pack.CmdCode)
 	{
 		//-------------------
 		case(cmdGetCurrentPosition):
@@ -156,31 +133,31 @@ void I2cRxParsing(void){
 				//LED_ACT_Toggel();
 		break;
 		//-------------------
-		//-------------------
-		//Это команда передается из эмитатора для отладки протакола.
-		case(cmdGetTemperature):
-				LED_ACT_Toggel();
-		if(I2cWire.pRxBuf[2] == 1)//Запрос для первого датчика температуры
-		{
-			I2cWire.pTxBuf[0] = (uint8_t) Sensor_1.TemperatureSign;
-			I2cWire.pTxBuf[1] = (uint8_t)(Sensor_1.Temperature >> 8);
-			I2cWire.pTxBuf[2] = (uint8_t) Sensor_1.Temperature;
-		}
-		else if(I2cWire.pRxBuf[2] == 2)//Запрос для второго датчика температуры
-		{
-			I2cWire.pTxBuf[3] = (uint8_t) Sensor_2.TemperatureSign;
-			I2cWire.pTxBuf[4] = (uint8_t)(Sensor_2.Temperature >> 8);
-			I2cWire.pTxBuf[5] = (uint8_t) Sensor_2.Temperature;
-		}
-		I2cWire.txBufSize = 6;//Кол-во байтов в ответе. По протоколу.
+		case(cmdGetEncoderPosition):
+			response->Pack.Count   = 15; //Размер пакета в байтах (без поля CMD)
+			response->Pack.CmdCode = cmdGetEncoderPosition;
+
+			response->Pack.Payload[0] = 0xA0; //u8 SPI status
+			response->Pack.Payload[1] = 0xA1; //u8 TMC reg address
+
+			*(uint32_t*)&response->Pack.Payload[6]  = MICRO_DELAY_GetCount(); //u32 beginTS
+			*(uint32_t*)&response->Pack.Payload[2]  = ENCODER_GetVal(); 	  //u32 data
+			*(uint32_t*)&response->Pack.Payload[10] = MICRO_DELAY_GetCount(); //u32 endTS
 		break;
 		//-------------------
+		case(cmdGetTemperature):
+			response->Pack.Count   = 5; 			   // Размер пакета в байтах (без поля CMD)
+			response->Pack.CmdCode = cmdGetTemperature;// Команда
+			if(request->Pack.Payload[0] == 1) TEMP_SENSE_BuildPack(&Sensor_1, response->Pack.Payload);//Запрос для первого датчика температуры
+			else 							  TEMP_SENSE_BuildPack(&Sensor_2, response->Pack.Payload);//Запрос для второго датчика температуры
+		break;
 		//-------------------
 		default:
 
 		break;
 		//-------------------
 	}
+	I2C_IT_SetTxSize(&I2cWire, response->Pack.Count+1);//Кол-во байтов в ответе(с полем CMD).
 }
 //************************************************************
 void I2cTxParsing(void){
@@ -307,8 +284,7 @@ int main(void){
 	MCU_EN_High();
 	FAN_EN_High();
 	GPS_EN_High();
-
-//	LIDAR_EN_High();
+	LIDAR_EN_High();
 //	LAMP_PWM_High();
 
 	MICRO_DELAY(500000);//Эта задержка нужна для стабилизации напряжения патания.
@@ -344,9 +320,7 @@ int main(void){
 	I2cWire.txBufSize     = 16;
 	I2cWire.i2cRxCallback = I2cRxParsing;
 	I2cWire.i2cTxCallback = I2cTxParsing;
-	//I2cWire.i2cDmaState  = I2C_DMA_READY
 	I2C_IT_Init(&I2cWire);
-	//I2C_DMA_Init(&I2cWire);
 	//***********************************************
 	//Инициализация	драйвера мотора.
 //	MOTOR_Init();
@@ -357,12 +331,10 @@ int main(void){
 	//***********************************************
 	//Ини-я диспетчера.
 	RTOS_Init();
-	RTOS_SetTask(Task_Temperature_Read, 50, 1000);//запуск задачи через 50мс и спериодом повторения 1000мс
+	RTOS_SetTask(Task_ReadTemperature,  50, 1000);//запуск задачи через 50мс и спериодом повторения 1000мс
 	RTOS_SetTask(Task_PwrButtonPolling, 50, 100); //запуск задачи через 50мс и спериодом повторения 100мс
 
 	//RTOS_SetTask(Task_Motor, 5000, 5000);
-	//RTOS_SetTask(Task_STM32_Slave_Write,0, 500);
-	//RTOS_SetTask(Task_STM32_Slave_Read, 0, 500);
 	//***********************************************
 	SysTick_Init();
 	__enable_irq();
@@ -388,35 +360,35 @@ void SysTick_IT_Handler(void){
 	BUTTON_CheckLoop(&PwrButton); //Опрос кнопки.
 	//------------------------------------------
 	//Работа с энкодером
-//	static uint32_t mSecCount = 0;
-//	//Формирование таймстемпов
-//	sysTick++;
-//	if(sysTick > 999999) sysTick = 0;
-//	//--------------------------
-//	if(++mSecCount >= 100)
-//	{
-//		mSecCount = 0;
-//
-//		//__disable_irq();
-//		//LED_ACT_High();
-//		//Чтение заначения энкодера. ~9,5 мкС
-//		EncoderTicks = ENCODER_GetVal();
-//		//LED_ACT_Low();
-//		//Расчет значений для будущего расчета скрости.
-//		Angle = ENCODER_DEGREE_QUANT * EncoderTicks;  //расчет угла поворота вала энкодера.
-//		if(OldAngle > Angle) OldAngle -= 360.0;		  //Это нужно для корректного расчета скорости при переходе от 359 к 0 градусов.
-//		DeltaAngle = Angle - OldAngle;         		  //приращение угла
-//
-//		//Расчет скорости вращения.
-//		RPM = DeltaAngle * QUANT_FOR_100mS;
-//		OldAngle = Angle;
-//		//Передаем данные
-//		BuildAndSendTextBuf(sysTick,
-//							EncoderTicks,
-//							(uint32_t)(Angle*1000),
-//							(uint32_t)(RPM*12)); //умножаем на 120 т.к. передаточное число редуктора 120.
-//		//__enable_irq();
-//	}
+	static uint32_t mSecCount = 0;
+	//Формирование таймстемпов
+	sysTick++;
+	if(sysTick > 999999) sysTick = 0;
+	//--------------------------
+	if(++mSecCount >= 100)
+	{
+		mSecCount = 0;
+
+		//__disable_irq();
+		//LED_ACT_High();
+		//Чтение заначения энкодера. ~9,5 мкС
+		EncoderTicks = ENCODER_GetVal();
+		//LED_ACT_Low();
+		//Расчет значений для будущего расчета скрости.
+		Angle = ENCODER_DEGREE_QUANT * EncoderTicks;  //расчет угла поворота вала энкодера.
+		if(OldAngle > Angle) OldAngle -= 360.0;		  //Это нужно для корректного расчета скорости при переходе от 359 к 0 градусов.
+		DeltaAngle = Angle - OldAngle;         		  //приращение угла
+
+		//Расчет скорости вращения.
+		RPM = DeltaAngle * QUANT_FOR_100mS;
+		OldAngle = Angle;
+		//Передаем данные
+		BuildAndSendTextBuf(sysTick,
+							EncoderTicks,
+							(uint32_t)(Angle*1000),
+							(uint32_t)(RPM*12)); //умножаем на 120 т.к. передаточное число редуктора 120.
+		//__enable_irq();
+	}
 	//------------------------------------------
 //	MOTOR_AccelDecelLoop();	//Отладка работы мотора.
 	//------------------------------------------
