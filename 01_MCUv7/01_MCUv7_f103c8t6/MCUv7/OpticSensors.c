@@ -11,20 +11,15 @@
 
 //*******************************************************************************************
 //*******************************************************************************************
-static uint32_t optSensState = 0;
+
 
 //*******************************************************************************************
 //*******************************************************************************************
 void OPT_SENS_Init(void){
 
-	//SENS_LED    - PB6 - выход
-	GPIOB->CRL &= ~(GPIO_CRL_CNF6);//выход, режим - push-pull.
-	GPIOB->CRL |=   GPIO_CRL_MODE6;//тактирование 50МГц.
-
-	//SENS_LENS_E - PB3 - вход
-
-	//SENS_BAT_E  - PB4 - вход
-
+	GPIO_InitForOutputPushPull(SENS_LED_GPIO_PORT, SENS_LED_GPIO_PIN);   //SENS_LED    - PB6 - выход
+	GPIO_InitForInputPullUp(SENS_LENS_E_GPIO_PORT, SENS_LENS_E_GPIO_PIN);//SENS_LENS_E - PB3 - вход
+	GPIO_InitForInputPullUp(SENS_BAT_E_GPIO_PORT,  SENS_BAT_E_GPIO_PIN); //SENS_BAT_E  - PB4 - вход
 }
 //**********************************************************
 /*
@@ -40,9 +35,11 @@ void OPT_SENS_CheckLoop(void){
 //	static uint32_t msCountForLed  = 0;
 //	static uint32_t msCountForSens = 0;
 	//-------------------
-
-
-
+//	if(!GPIO_GetPinState(SENS_LENS_E_GPIO_PORT, SENS_LENS_E_GPIO_PIN))
+//	{
+//		LED_ACT_High();
+//	}
+//	else LED_ACT_Low();
 }
 //**********************************************************
 uint32_t OPT_SENS_GetState(uint32_t sens){

@@ -18,13 +18,17 @@
 
 //*******************************************************************************************
 // MCU_EN - PB2
-#define MCU_EN_High()   	(GPIOB->BSRR = GPIO_BSRR_BS2)
-#define MCU_EN_Low()    	(GPIOB->BSRR = GPIO_BSRR_BR2)
-#define MCU_EN_Toggel() 	(GPIOB->ODR ^= GPIO_ODR_ODR2)
+#define MCU_EN_GPIO_PORT	GPIOB
+#define MCU_EN_GPIO_PIN		2
+#define MCU_EN_High()   	(MCU_EN_GPIO_PORT->BSRR = GPIO_BSRR_BS2)
+#define MCU_EN_Low()    	(MCU_EN_GPIO_PORT->BSRR = GPIO_BSRR_BR2)
+#define MCU_EN_Toggel() 	(MCU_EN_GPIO_PORT->ODR ^= GPIO_ODR_ODR2)
 // LED_ACT - PA15
-#define LED_ACT_High()   	(GPIOA->BSRR = GPIO_BSRR_BS15)
-#define LED_ACT_Low()    	(GPIOA->BSRR = GPIO_BSRR_BR15)
-#define LED_ACT_Toggel() 	(GPIOA->ODR ^= GPIO_ODR_ODR15)
+#define LED_ACT_GPIO_PORT	GPIOA
+#define LED_ACT_GPIO_PIN	15
+#define LED_ACT_High()   	(LED_ACT_GPIO_PORT->BSRR = GPIO_BSRR_BS15)
+#define LED_ACT_Low()    	(LED_ACT_GPIO_PORT->BSRR = GPIO_BSRR_BR15)
+#define LED_ACT_Toggel() 	(LED_ACT_GPIO_PORT->ODR ^= GPIO_ODR_ODR15)
 // GPS_EN - PB13
 #define GPS_EN_High()   	(GPIOB->BSRR = GPIO_BSRR_BS13)
 #define GPS_EN_Low()    	(GPIOB->BSRR = GPIO_BSRR_BR13)
@@ -33,10 +37,6 @@
 #define LIDAR_EN_High()   	(GPIOB->BSRR = GPIO_BSRR_BS5)
 #define LIDAR_EN_Low()    	(GPIOB->BSRR = GPIO_BSRR_BR5)
 #define LIDAR_EN_Toggel() 	(GPIOB->ODR ^= GPIO_ODR_ODR5)
-// SENS_LED - PB6
-#define SENS_LED_High()   	(GPIOB->BSRR = GPIO_BSRR_BS6)
-#define SENS_LED_Low()   	(GPIOB->BSRR = GPIO_BSRR_BR6)
-#define SENS_LED_Toggel() 	(GPIOB->ODR ^= GPIO_ODR_ODR6)
 // BB_PWR_BTN - PA8
 #define BB_PWR_BTN_High()   (GPIOA->BSRR = GPIO_BSRR_BS8)
 #define BB_PWR_BTN_Low()    (GPIOA->BSRR = GPIO_BSRR_BR8)
@@ -92,7 +92,7 @@
 //**********************************************************
 // MCU_PWR_PBN - PB7 - вход. Кнопка включения питания.
 #define MCU_PWR_BTN_GPIO	GPIOB
-#define MCU_PWR_BTN_PIN		GPIO_IDR_IDR7
+#define MCU_PWR_BTN_PIN		7
 
 
 //#define LedPC13On()     (GPIOC->BSRR = GPIO_BSRR_BS13)
@@ -112,6 +112,7 @@
 
 //*******************************************************************************************
 //*******************************************************************************************
+void GPIO_InitForOutputPushPull(GPIO_TypeDef *port, uint32_t pin);
 void GPIO_InitForOutputOpenDrain(GPIO_TypeDef *port, uint32_t pin);
 void GPIO_InitForInputPullUp(GPIO_TypeDef *port, uint32_t pin);
 

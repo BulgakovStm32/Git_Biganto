@@ -72,12 +72,12 @@ void Task_PwrButtonPolling(void){
 //*******************************************************************************************
 void I2cRxParsing(void){
 
-	MCU_RequestPack_t  *request  = (MCU_RequestPack_t *) I2C_IT_GetpRxBuf(&I2cWire);
-	MCU_ResponsePack_t *response = (MCU_ResponsePack_t *)I2C_IT_GetpTxBuf(&I2cWire);
+	MCU_Request_t  *request  = (MCU_Request_t *) I2C_IT_GetpRxBuf(&I2cWire);
+	MCU_Response_t *response = (MCU_Response_t *)I2C_IT_GetpTxBuf(&I2cWire);
 	//--------------------------
 	LED_ACT_Toggel();//Отладка
 	//Разбор пришедшего запроса
-	switch(request->Pack.CmdCode)
+	switch(request->CmdCode)
 	{
 		//-------------------
 		case(cmdGetCurrentPosition):
@@ -105,7 +105,7 @@ void I2cRxParsing(void){
 				//LED_ACT_Toggel();
 		break;
 		//-------------------
-		case(cmdSetMicrostep ):
+		case(cmdSetMicrostep):
 				//LED_ACT_Toggel();
 		break;
 		//-------------------
@@ -122,7 +122,9 @@ void I2cRxParsing(void){
 		break;
 		//-------------------
 		case(cmdArduinoMicroTS):
-				//LED_ACT_Toggel();
+			response->Count   = 5; //Размер пакета в байтах (без поля COUNT)
+			response->CmdCode = cmdArduinoMicroTS;
+			*(uint32_t*)&response->Payload[0] = RTOS_GetTickCount();
 		break;
 		//-------------------
 		case(cmdArduinoMeasurePulseCalibration):
@@ -134,22 +136,22 @@ void I2cRxParsing(void){
 		break;
 		//-------------------
 		case(cmdGetEncoderPosition):
-			response->Pack.Count   = 15; //Размер пакета в байтах (без поля CMD)
-			response->Pack.CmdCode = cmdGetEncoderPosition;
+			response->Count   = 15; //Размер пакета в байтах (без поля COUNT)
+			response->CmdCode = cmdGetEncoderPosition;
 
-			response->Pack.Payload[0] = 0xA0; //u8 SPI status
-			response->Pack.Payload[1] = 0xA1; //u8 TMC reg address
+			response->Payload[0] = 0xA0; //u8 SPI status      - заглушка
+			response->Payload[1] = 0xA1; //u8 TMC reg address - заглушка
 
-			*(uint32_t*)&response->Pack.Payload[6]  = MICRO_DELAY_GetCount(); //u32 beginTS
-			*(uint32_t*)&response->Pack.Payload[2]  = ENCODER_GetVal(); 	  //u32 data
-			*(uint32_t*)&response->Pack.Payload[10] = MICRO_DELAY_GetCount(); //u32 endTS
+			*(uint32_t*)&response->Payload[6]  = MICRO_DELAY_GetCount(); //u32 beginTS
+			*(uint32_t*)&response->Payload[2]  = ENCODER_GetVal(); 	     //u32 data
+			*(uint32_t*)&response->Payload[10] = MICRO_DELAY_GetCount(); //u32 endTS
 		break;
 		//-------------------
 		case(cmdGetTemperature):
-			response->Pack.Count   = 5; 			   // Размер пакета в байтах (без поля CMD)
-			response->Pack.CmdCode = cmdGetTemperature;// Команда
-			if(request->Pack.Payload[0] == 1) TEMP_SENSE_BuildPack(&Sensor_1, response->Pack.Payload);//Запрос для первого датчика температуры
-			else 							  TEMP_SENSE_BuildPack(&Sensor_2, response->Pack.Payload);//Запрос для второго датчика температуры
+			response->Count   = 5; 			      // Размер пакета в байтах (без поля COUNT)
+			response->CmdCode = cmdGetTemperature;// Команда
+			if(request->Payload[0] == 1) TEMP_SENSE_BuildPack(&Sensor_1, response->Payload);//Запрос для первого датчика температуры
+			else 						 TEMP_SENSE_BuildPack(&Sensor_2, response->Payload);//Запрос для второго датчика температуры
 		break;
 		//-------------------
 		default:
@@ -157,12 +159,14 @@ void I2cRxParsing(void){
 		break;
 		//-------------------
 	}
-	I2C_IT_SetTxSize(&I2cWire, response->Pack.Count+1);//Кол-во байтов в ответе(с полем CMD).
+	I2C_IT_SetTxSize(&I2cWire, response->Count+1);//Кол-во байтов в ответе(с полем COUNT).
 }
 //************************************************************
 void I2cTxParsing(void){
 
 }
+//*******************************************************************************************
+//*******************************************************************************************
 //*******************************************************************************************
 //*******************************************************************************************
 //Работа с энкодером AMM3617.Энкодер выдает 17-тибитный код Грея.
@@ -241,7 +245,10 @@ void BuildAndSendTextBuf(uint32_t timeStamp, uint32_t encodTicks, uint32_t angle
 
 	DMA1Ch4StartTx(txBuf, 31);
 }
-//************************************************************
+//*******************************************************************************************
+//*******************************************************************************************
+//*******************************************************************************************
+//*******************************************************************************************
 void Task_Motor(void){
 
 	static uint32_t flag = 0;
@@ -257,6 +264,8 @@ void Task_Motor(void){
 		flag = 0;
 	}
 }
+//*******************************************************************************************
+//*******************************************************************************************
 //*******************************************************************************************
 //*******************************************************************************************
 int main(void){
@@ -315,9 +324,8 @@ int main(void){
 	//Инициализация I2C Slave для работы по прерываниям.
 	I2cWire.i2c 		  = I2C2;
 	I2cWire.i2cMode		  = I2C_MODE_SLAVE;
-	I2cWire.i2cGpioRemap  = I2C_GPIO_NOREMAP;;
+	I2cWire.i2cGpioRemap  = I2C_GPIO_NOREMAP;
 	I2cWire.slaveAddr	  = 0x05;
-	I2cWire.txBufSize     = 16;
 	I2cWire.i2cRxCallback = I2cRxParsing;
 	I2cWire.i2cTxCallback = I2cTxParsing;
 	I2C_IT_Init(&I2cWire);
@@ -386,7 +394,7 @@ void SysTick_IT_Handler(void){
 		BuildAndSendTextBuf(sysTick,
 							EncoderTicks,
 							(uint32_t)(Angle*1000),
-							(uint32_t)(RPM*12)); //умножаем на 120 т.к. передаточное число редуктора 120.
+							(uint32_t)(RPM*120)); //умножаем на 120 т.к. передаточное число редуктора 120.
 		//__enable_irq();
 	}
 	//------------------------------------------

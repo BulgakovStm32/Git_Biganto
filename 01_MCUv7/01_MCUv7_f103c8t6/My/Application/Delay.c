@@ -27,19 +27,20 @@ void msDelay(volatile uint32_t del){
 //*******************************************************************************************
 //Микросекундная задержка.
 #define SYS_CORE_CLOCK     72000000U
-#define TACTS_FOR_MICROSEC 72 //(SYS_CORE_CLOCK/1000000U)
+#define TACTS_FOR_MICROSEC (SYS_CORE_CLOCK/1000000U)
 
 //**********************************************************
 void MICRO_DELAY_Init(void){
 
 	CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk; // разрешаем использовать счётчик
+	DWT->CYCCNT       = 0;						    // сброс счетчика
 	DWT->CTRL        |= DWT_CTRL_CYCCNTENA_Msk;     // запускаем счётчик
 }
 //**********************************************************
 uint32_t MICRO_DELAY_GetCount(void){
 
-	return (DWT->CYCCNT / TACTS_FOR_MICROSEC);
-	//return DWT->CYCCNT ;
+	volatile uint32_t temp = DWT->CYCCNT;
+	return (temp / TACTS_FOR_MICROSEC);
 }
 //**********************************************************
 void MICRO_DELAY(uint32_t microSec){

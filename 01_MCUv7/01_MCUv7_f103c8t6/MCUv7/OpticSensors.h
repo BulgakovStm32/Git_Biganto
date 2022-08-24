@@ -15,14 +15,17 @@
 //*******************************************************************************************
 //*******************************************************************************************
 //SENS_LED    - PB6 - выход
-#define	SENS_LED_GPIO		GPIOB
-#define SENS_LED_PIN		GPIO_ODR_ODR6
+#define	SENS_LED_GPIO_PORT		GPIOB
+#define SENS_LED_GPIO_PIN		6
+#define SENS_LED_High()   		(SENS_LED_GPIO_PORT->BSRR = GPIO_BSRR_BS6)
+#define SENS_LED_Low()   		(SENS_LED_GPIO_PORT->BSRR = GPIO_BSRR_BR6)
+#define SENS_LED_Toggel() 		(SENS_LED_GPIO_PORT->ODR ^= GPIO_ODR_ODR6)
 //SENS_LENS_E - PB3 - вход
-#define	SENS_LENS_E_GPIO	GPIOB
-#define SENS_LENS_E_PIN		GPIO_IDR_IDR3
+#define	SENS_LENS_E_GPIO_PORT	GPIOB
+#define SENS_LENS_E_GPIO_PIN	3
 //SENS_BAT_E  - PB4 - вход
-#define	SENS_BAT_E_GPIO		GPIOB
-#define SENS_BAT_E_PIN		GPIO_IDR_IDR4
+#define	SENS_BAT_E_GPIO_PORT	GPIOB
+#define SENS_BAT_E_GPIO_PIN		4
 //*******************************************************************************************
 //*******************************************************************************************
 void 	 OPT_SENS_Init(void);

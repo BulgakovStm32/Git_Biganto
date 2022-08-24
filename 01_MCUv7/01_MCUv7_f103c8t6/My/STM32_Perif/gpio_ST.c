@@ -19,6 +19,25 @@ static uint32_t _gpio_PortXClockEnable(GPIO_TypeDef *port){
 }
 //*******************************************************************************************
 //*******************************************************************************************
+void GPIO_InitForOutputPushPull(GPIO_TypeDef *port, uint32_t pin){
+
+	//Включение тактирования портов.
+	if(!_gpio_PortXClockEnable(port)) return;
+	//Конфигурация выводы в режим 50MHz output push-pull
+	if(pin <= 7)
+	{
+		pin = pin * 4;
+		port->CRL |=  (0X03 << pin);    //MODEy[1:0] - 11: Output mode, max speed 50 MHz
+		port->CRL &= ~(0x03 << (pin+2));//CNFy[1:0]  - 00: General purpose output push-pull
+	}
+	else
+	{
+		pin = (pin - 8) * 4;
+		port->CRH |=  (0X03 << pin);    //MODEy[1:0] - 11: Output mode, max speed 50 MHz
+		port->CRH &= ~(0x03 << (pin+2));//CNFy[1:0]  - 00: General purpose output push-pull
+	}
+}
+//**********************************************************
 void GPIO_InitForOutputOpenDrain(GPIO_TypeDef *port, uint32_t pin){
 
 	//Включение тактирования портов.
@@ -27,16 +46,16 @@ void GPIO_InitForOutputOpenDrain(GPIO_TypeDef *port, uint32_t pin){
 	if(pin <= 7)
 	{
 		pin = pin * 4;
-		port->CRL |=  (0X03 << pin) |         //MODEy[1:0] - 11: Output mode, max speed 50 MHz
-					  (0X01 << (0X02 << pin));//CNFy[1:0]  - 01: General purpose output Open-drain
-		port->CRL &= ~(0x02 << (0x02 << pin));//
+		port->CRL |=  (0X03 << pin) |   //MODEy[1:0] - 11: Output mode, max speed 50 MHz
+					  (0X01 << (pin+2));//CNFy[1:0]  - 01: General purpose output Open-drain
+		port->CRL &= ~(0x02 << (pin+2));//
 	}
 	else
 	{
 		pin = (pin - 8) * 4;
-		port->CRH |=  (0x03 << pin) |         //MODEy[1:0] - 11: Output mode, max speed 50 MHz
-					  (0x01 << (0x02 << pin));//CNFy[1:0]  - 01: General purpose output Open-drain
-		port->CRH &= ~(0x02 << (0x02 << pin));//
+		port->CRH |=  (0x03 << pin) |   //MODEy[1:0] - 11: Output mode, max speed 50 MHz
+					  (0x01 << (pin+2));//CNFy[1:0]  - 01: General purpose output Open-drain
+		port->CRH &= ~(0x02 << (pin+2));//
 	}
 }
 //**********************************************************
@@ -97,7 +116,7 @@ void GPIO_Init(void){
 	GPIOB->CRL |=  (GPIO_CRL_MODE1 | GPIO_CRL_MODE2 | GPIO_CRL_MODE5 | GPIO_CRL_MODE6);//тактирование 50МГц.
 	//--------------------
 	//BB_PWR_BTN - PA8
-	//LED_AC     - PA15
+	//LED_ACT    - PA15
 	GPIOA->CRH &= ~(GPIO_CRH_CNF8  | GPIO_CRH_CNF15); //выход, режим - push-pull.
 	GPIOA->CRH |=  (GPIO_CRH_MODE8 | GPIO_CRH_MODE15);//тактирование 50МГц.
 	//--------------------
@@ -233,9 +252,9 @@ uint32_t GPIO_GetPortState(GPIO_TypeDef *port){
 //**********************************************************
 uint32_t GPIO_GetPinState(GPIO_TypeDef *port, uint32_t pin){
 
-		 if(port == GPIOA) return (GpioAState & pin);
-	else if(port == GPIOB) return (GpioBState & pin);
-	else if(port == GPIOC) return (GpioCState & pin);
+		 if(port == GPIOA) return (GpioAState & (1<<pin));
+	else if(port == GPIOB) return (GpioBState & (1<<pin));
+	else if(port == GPIOC) return (GpioCState & (1<<pin));
 	return 0;
 }
 //*******************************************************************************************
