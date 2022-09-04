@@ -26,13 +26,25 @@ typedef enum {
 //-----------------------------------
 typedef enum {
 	MOTOR_NO_INIT = 0,
-	MOTOR_READY,
-	MOTOR_CALC_OK,
+	MOTOR_STOP,
 	MOTOR_ACCEL,
-	MOTOR_DESIRED_SPEED,
+	MOTOR_RUN,
 	MOTOR_DECEL,
-	MOTOR_BUSY,
 }MotorState_t;
+//-----------------------------------
+typedef struct{
+	MotorState_t state;
+	uint32_t 	 spsVstart;
+	uint32_t 	 spsVmax;
+	int32_t  	 allSteps;
+
+	uint32_t 	 accelSteps;
+	uint32_t 	 runSteps;
+	uint32_t 	 decelSteps;
+
+	uint32_t 	 stepCount;
+
+}StepMotorRampData_t;
 //-----------------------------------
 #define MOTOR_FREQ_TIM_Hz 			1000000U //частота тактироваия базового таймера
 #define MOTOR_QUANT_TIME_mS			1 		 //период в мС расчета значений скорости ускорения/замедлениия
@@ -45,22 +57,13 @@ typedef enum {
 //*******************************************************************************************
 void 	 MOTOR_Init(void);
 void 	 MOTOR_SetMicrostep(MotorStepMode_t steps);
-uint32_t MOTOR_GetMicrostep(void);
-
-uint32_t MOTOR_GetCurrentPosition(void);
-uint32_t MOTOR_GetCurrentAcceleration(void);
-uint32_t MOTOR_GetCurrentVelocity(void);
-
-void MOTOR_SetTargetPosition(uint32_t position);
-void MOTOR_SetMaxAcceleration(uint32_t acceleration);
-void MOTOR_SetMaxVelocity(uint32_t vel_rpm);
+MotorStepMode_t MOTOR_GetMicrostep(void);
 
 void MOTOR_ResetDrv(void);
 void MOTOR_ResetPosition(void);
 //-----------------------------------
-uint32_t MOTOR_CalcAccelMaxToAccelTime(uint32_t Vmax_rpm, uint32_t Accel);
-void	 MOTOR_CalcAccelDecel(uint32_t Vstart_rpm, uint32_t Vmax_rpm, uint32_t timeAccel_ms);
-void 	 MOTOR_SpinStart(MotorState_t spinMode);
+void	 MOTOR_CalcAccelDecel(int32_t step, uint32_t Vstart_rpm, uint32_t Vmax_rpm, uint32_t accelTime_mS);
+void     MOTOR_Move(int32_t angle, uint32_t Vstart_rpm, uint32_t Vmax_rpm, uint32_t accelTime_mS);
 void 	 MOTOR_AccelDecelLoop(void);
 
 
