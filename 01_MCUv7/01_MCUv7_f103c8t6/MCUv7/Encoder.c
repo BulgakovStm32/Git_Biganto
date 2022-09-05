@@ -35,12 +35,13 @@ void ENCODER_Init(void){
 }
 //**********************************************************
 //Получение значение поворота энкодера.
-uint32_t ENCODER_GetVal(void){
+uint32_t ENCODER_GetCode(void){
 
 	if(encoderState == ENCODER_NO_INIT) return 0;
 	//Чтение и выравнивание данных из энкодера.
-	uint32_t encoderVal = (SPI_Rx3Byte(ENCODER_SPI) >> 6) & 0x0001FFFF; //Разрешения энкодера 17 бит.
-	return _encoder_GrayToBin(encoderVal);                            	//Преобразование кода Грея в двоичный код.
+	uint32_t encoderVal = (SPI_Rx3Byte(ENCODER_SPI) >> 7) & 0x0000FFFF; //Разрешения энкодера 16 бит.
+	//return _encoder_GrayToBin(encoderVal);                            	//Преобразование кода Грея в двоичный код.
+	return encoderVal;
 }
 //**********************************************************
 
@@ -58,7 +59,7 @@ uint32_t ENCODER_GetEncoderConstant(void){
 	return encoderConstant;
 }
 //**********************************************************
-void ENCODER_GetEncoderPosition(uint8_t *buf){
+void ENCODER_GetCodeEncoder(uint8_t *buf){
 
 	uint32_t encoder = ENCODER_GetVal();
 

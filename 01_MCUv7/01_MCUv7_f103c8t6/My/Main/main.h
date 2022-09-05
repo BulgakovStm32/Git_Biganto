@@ -34,12 +34,14 @@
 #include "Encoder.h"
 #include "Motor.h"
 #include "OpticSensors.h"
+#include "Power.h"
 //-------------------------
 //Application
 #include "Delay.h"
 #include "Blink.h"
 #include "DS18B20.h"
 #include "Buttons.h"
+#include "Crc.h"
 
 #include "LcdGraphic.h"
 //#include "Lcd_i2c_1602.h"

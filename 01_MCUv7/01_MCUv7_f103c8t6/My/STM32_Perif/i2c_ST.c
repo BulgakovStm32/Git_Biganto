@@ -33,21 +33,20 @@ static uint32_t _i2c_LongWait(I2C_TypeDef *i2c, uint32_t flag){
 	//---------------------
 	while(!(i2c->SR1 & flag))//Ждем отпускания флага.
 	{
-		//if(++wait_count >= I2C_WAIT_TIMEOUT) return 1;
-		if((i2c->SR1 & I2C_SR1_AF) ||		   //Если NAC или
-		   (++wait_count >= I2C_WAIT_TIMEOUT)) //вышел таймаут
-		{
-			i2c->SR1 &= ~(I2C_SR1_AF   |  //Сброс флагов ошибок.
-					      I2C_SR1_BERR |  //
-						  I2C_SR1_ARLO |
-						  I2C_SR1_OVR);
+		if(++wait_count >= I2C_WAIT_TIMEOUT) return 1;
 
-			i2c->CR1 |= I2C_CR1_STOP|   //Формируем Stop
-					    I2C_CR1_ACK;    //to be ready for another reception
-//			(void)i2c->SR1;
-//			(void)i2c->SR2;
-			return 1;
-		}
+//		if((i2c->SR1 & I2C_SR1_AF) ||		   //Если NAC или
+//		   (++wait_count >= I2C_WAIT_TIMEOUT)) //вышел таймаут
+//		{
+//			i2c->SR1 &= ~(I2C_SR1_AF   |  //Сброс флагов ошибок.
+//					      I2C_SR1_BERR |  //
+//						  I2C_SR1_ARLO |
+//						  I2C_SR1_OVR);
+//
+//			i2c->CR1 |= I2C_CR1_STOP|   //Формируем Stop
+//					    I2C_CR1_ACK;    //to be ready for another reception
+//			return 1;
+//		}
 	}
 	return 0;
 }
@@ -102,6 +101,10 @@ I2C_State_t I2C_StartAndSendDeviceAddr(I2C_TypeDef *i2c, uint32_t deviceAddr){
 	i2c->DR = deviceAddr;
 	if(_i2c_LongWait(i2c, I2C_SR1_ADDR))//Ожидаем окончания передачи адреса
 	{
+		i2c->SR1 &= ~I2C_SR1_AF;  //Сброс флагов ошибок.
+		i2c->CR1 |= I2C_CR1_STOP| //Формируем Stop
+				    I2C_CR1_ACK;  //to be ready for another reception
+
 		if(i2c == I2C1) I2C1NacCount++;
 		else			I2C2NacCount++;
 		return I2C_ERR_ADDR;
@@ -281,6 +284,7 @@ void I2C_Slave_Init(I2C_TypeDef *i2c, uint32_t remap, uint32_t slaveAddr){
 	i2c->CR1 |=  I2C_CR1_PE;    //Включение модуля I2C1.
 	i2c->CR1 &= ~I2C_CR1_SMBUS; //модуль работает в режиме I2C
 	i2c->SR2 &= ~I2C_SR2_MSL;   //режим Slave.
+	i2c->SR1  = 0; 			    //Сброс флагов ошибок.
 
 	i2c->OAR1 = slaveAddr << 1; //адрес устройства на шине.
 	i2c->CR1 |= I2C_CR1_ACK;	//разрешаем отправлять ACK/NACK после приема байта адреса.
@@ -288,19 +292,19 @@ void I2C_Slave_Init(I2C_TypeDef *i2c, uint32_t remap, uint32_t slaveAddr){
 	//i2c->CR1 |= I2C_CR1_NOSTRETCH;
 
 	//Скорость работы.
-	i2c->CR2  &= ~I2C_CR2_FREQ;   		        //
-	i2c->CR2  |= (I2C_FREQ << I2C_CR2_FREQ_Pos);//APB1 = 36MHz
-
-	i2c->CCR   &= ~I2C_CCR_CCR;
+	i2c->CR2  = 0;
+	i2c->CR2 |= (I2C_FREQ << I2C_CR2_FREQ_Pos);//APB1 = 36MHz
+	i2c->CCR  = 0;
+	//FastMode(400kHz)
 	i2c->CCR   |=  I2C_CCR_FS; //1 - режим FastMode(400kHz), 0 - режим STANDART(100kHz).
 	i2c->CCR   |= (I2C_FM_CCR << I2C_CCR_CCR_Pos);
 	i2c->TRISE |= (I2C_FM_TRISE << I2C_TRISE_TRISE_Pos);
-
-	//i2c->CCR   =  120;//100кГц
-	//i2c->CCR   =  30; //400кГц  45;//I2C_CCR_VALUE;  //(36MHz/I2C_BAUD_RATE/2)
-	//i2c->TRISE =  12; //37;//I2C_TRISE_VALUE;//(1mcs/(1/36MHz)+1)
-
-	//i2c->CR1  |=  I2C_CR1_PE; //Включение модуля I2C1.
+	//StandartMode(100kHz).
+//	i2c->CCR   &= ~I2C_CCR_FS; //1 - режим FastMode(400kHz), 0 - режим STANDART(100kHz).
+//	i2c->CCR   |= (I2C_SM_CCR << I2C_CCR_CCR_Pos);
+//	i2c->TRISE |= (I2C_SM_TRISE << I2C_TRISE_TRISE_Pos);
+	//Включение модуля I2C.
+//	i2c->CR1 |= I2C_CR1_PE;
 }
 //**********************************************************
 
@@ -346,6 +350,8 @@ void I2C_IT_Init(I2C_IT_t *i2cIt){
 		NVIC_EnableIRQ(I2C2_EV_IRQn);      //Разрешаем прерывание.
 		NVIC_EnableIRQ(I2C2_ER_IRQn);      //Разрешаем прерывание.
 	}
+	//Включение модуля I2C.
+	//i2cIt->i2c->CR1 |= I2C_CR1_PE;
 }
 //**********************************************************
 uint8_t* I2C_IT_GetpTxBuf(I2C_IT_t *i2cIt){
@@ -485,6 +491,13 @@ static void I2C_IT_Event(I2C_IT_t *i2cIt){
 	//------------------------------
 }
 //**********************************************************
+void _i2c_ClearErrFlagAndStop(I2C_TypeDef *i2c, uint32_t flag){
+
+	i2c->SR1 &= ~(flag); 	   //Сброс флага ошибки.
+	i2c->CR1 |= I2C_CR1_STOP | //Формируем Stop
+				I2C_CR1_ACK;   //to be ready for another reception
+}
+
 //Обработчик прерывания ошибок I2C
 static void I2C_IT_Error(I2C_IT_t *i2cIt){
 
@@ -501,27 +514,31 @@ static void I2C_IT_Error(I2C_IT_t *i2cIt){
 			i2cIt->i2cItState = 0;
 			i2cIt->txBufIndex = 0;
 		}
-		i2c->SR1 &= ~I2C_SR1_AF; //Сброс AF.
-		//i2c->CR1 |= I2C_CR1_STOP;//Формируем Stop
+//		i2c->SR1 &= ~I2C_SR1_AF; //Сброс AF.
+//		i2c->CR1 |= I2C_CR1_STOP;//Формируем Stop
+		_i2c_ClearErrFlagAndStop(i2c, I2C_SR1_AF);
 		return;
 	}
 	//------------------------------
 	//Bus error
 	if(i2c->SR1 & I2C_SR1_BERR)
 	{
-		i2c->SR1 &= ~I2C_SR1_BERR; //Сброс BERR.
+		//i2c->SR1 &= ~I2C_SR1_BERR; //Сброс BERR.
+		_i2c_ClearErrFlagAndStop(i2c, I2C_SR1_BERR);
 	}
 	//------------------------------
 	//Arbitration loss (Master)
 	if(i2c->SR1 & I2C_SR1_ARLO)
 	{
-		i2c->SR1 &= ~I2C_SR1_ARLO; //Сброс ARLO.
+		//i2c->SR1 &= ~I2C_SR1_ARLO; //Сброс ARLO.
+		_i2c_ClearErrFlagAndStop(i2c, I2C_SR1_ARLO);
 	}
 	//------------------------------
 	//Overrun/Underrun
 	if(i2c->SR1 & I2C_SR1_OVR)
 	{
-		i2c->SR1 &= ~I2C_SR1_OVR; //Сброс OVR.
+		//i2c->SR1 &= ~I2C_SR1_OVR; //Сброс OVR.
+		_i2c_ClearErrFlagAndStop(i2c, I2C_SR1_OVR);
 	}
 	//------------------------------
 	//PEC error

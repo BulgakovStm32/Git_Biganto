@@ -48,21 +48,23 @@ void TIM1_Init(void){
 	RCC->APB2ENR |= RCC_APB2ENR_TIM1EN;
 	//Прескаллер.
 	//APB2_CLK = 72MHz, TIM1_CLK = APB2_CLK * 1 = 72MHz.
-	TIM1->PSC  = 72-1;		  //таймер будет тактироваться с частотой 72МГц/(PSC - 1).
-	TIM1->ARR  = 100-1; 	  //Auto reload register. - это значение, до которого будет считать таймер.
-	TIM1->CR1 |= TIM_CR1_ARPE;//Auto-reload preload enable
+	//TIM1->PSC = 72-1;		  //таймер будет тактироваться с частотой 72МГц/(PSC - 1).
+	TIM1->PSC = 32-1;		  //таймер будет тактироваться с частотой 2MHz.
+
+	//TIM1->ARR  = 100-1; 	  //Auto reload register. - это значение, до которого будет считать таймер.
+	//TIM1->CR1 |= TIM_CR1_ARPE;//Auto-reload preload enable
 
 	//Настройка прерываний.
 	TIM1->CR1  |= TIM_CR1_URS; //Update Request Source
 	TIM1->EGR  |= TIM_EGR_UG;  //Update generation
 	TIM1->DIER |= TIM_DIER_UIE;//Update interrupt enable
 
-	//Разрешение прерывания от TIM4.
+	//Разрешение прерывания от TIM1.
 	NVIC_SetPriority(TIM1_UP_IRQn, 15);
 	NVIC_EnableIRQ(TIM1_UP_IRQn);
 
 	//Включение таймера
-	TIM1->CR1 |= TIM_CR1_CEN;//CEN: Counter enable
+	//TIM1->CR1 |= TIM_CR1_CEN;//CEN: Counter enable
 }
 //*******************************************************************************************
 //*******************************************************************************************

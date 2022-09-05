@@ -68,6 +68,8 @@
 #define DRV_MODE0_Low()    	(GPIOC->BSRR = GPIO_BSRR_BR15)
 #define DRV_MODE0_Toggel() 	(GPIOC->ODR ^= GPIO_ODR_ODR15)
 // DRV_STEP - PA0
+#define DRV_STEP_GPIO_PORT	GPIOA
+#define DRV_STEP_GPIO_PIN	0
 #define DRV_STEP_High()   	(GPIOA->BSRR = GPIO_BSRR_BS0)
 #define DRV_STEP_Low()    	(GPIOA->BSRR = GPIO_BSRR_BR0)
 #define DRV_STEP_Toggel() 	(GPIOA->ODR ^= GPIO_ODR_ODR0)

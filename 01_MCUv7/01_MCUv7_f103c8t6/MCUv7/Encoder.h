@@ -14,7 +14,8 @@
 
 //*******************************************************************************************
 //*******************************************************************************************
-#define ENCODER_SPI		SPI1
+#define ENCODER_SPI				SPI1
+#define ENCODER_RESOLUTION_BIT	16
 
 typedef enum {
 	ENCODER_NO_INIT = 0,
@@ -24,11 +25,11 @@ typedef enum {
 //*******************************************************************************************
 //*******************************************************************************************
 void 	 ENCODER_Init(void);
-uint32_t ENCODER_GetVal(void);
+uint32_t ENCODER_GetCode(void);
 
 void 	 ENCODER_SetEncoderConstant(uint32_t value);
 uint32_t ENCODER_GetEncoderConstant(void);
-void 	 ENCODER_GetEncoderPosition(uint8_t *buf);
+void 	 ENCODER_GetCodeEncoder(uint8_t *buf);
 
 //*******************************************************************************************
 //*******************************************************************************************

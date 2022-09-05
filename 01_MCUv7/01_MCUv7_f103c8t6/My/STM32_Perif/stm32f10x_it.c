@@ -418,9 +418,9 @@ void TIM1_BRK_IRQHandler(void){
 *******************************************************************************/
 void TIM1_UP_IRQHandler(void){
 
-//	TIM1->SR &= ~TIM_SR_UIF;//Сброс флага прерывания.
-//	LED_ACT_Toggel();
-//	MOTOR_AccelDecelLoop();
+	TIM1->SR &= ~TIM_SR_UIF;//Сброс флага прерывания.
+	MOTOR_TimerITHandler();
+//	MOTOR_TimerITHandler2();
 }
 
 /*******************************************************************************
@@ -453,8 +453,11 @@ void TIM1_CC_IRQHandler(void){
 * Output         : None
 * Return         : None
 *******************************************************************************/
-void TIM2_IRQHandler(void) {
+void TIM2_IRQHandler(void){
 
+	TIM2->SR &= ~TIM_SR_UIF;//Сброс флага прерывания.
+//	MOTOR_TimerITHandler();
+	//LED_ACT_Toggel();//Отладка.
 }
 
 /*******************************************************************************

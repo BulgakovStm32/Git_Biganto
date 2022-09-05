@@ -7,7 +7,7 @@
  *
  *	Описание  : MCUv7
  *
- *	Последнее редактирование: 22.07.2022
+ *	Последнее редактирование: 24.08.2022
  *
  */
 //*******************************************************************************************
@@ -17,16 +17,9 @@
 
 //*******************************************************************************************
 //*******************************************************************************************
+
 Button_t  PwrButton;
 
-DS18B20_t Sensor_1;
-DS18B20_t Sensor_2;
-
-I2C_IT_t  I2cWire;
-
-
-
-uint16_t motorTab[6200] = {0};
 //*******************************************************************************************
 //*******************************************************************************************
 uint32_t Led_Blink(uint32_t millis, uint32_t period, uint32_t switch_on_time){
@@ -47,8 +40,7 @@ uint32_t Led_Blink(uint32_t millis, uint32_t period, uint32_t switch_on_time){
 //*******************************************************************************************
 void Task_ReadTemperature(void){
 
-	TemperatureSens_ReadTemperature(&Sensor_1);
-	TemperatureSens_ReadTemperature(&Sensor_2);
+	TEMPERATURE_SENSE_Loop();
 }
 //************************************************************
 //ф-я вызыввается каждые 100мс.
@@ -74,107 +66,10 @@ void Task_PwrButtonPolling(void){
 }
 //*******************************************************************************************
 //*******************************************************************************************
-void I2cRxParsing(void){
-
-	MCU_Request_t  *request  = (MCU_Request_t *) I2C_IT_GetpRxBuf(&I2cWire);
-	MCU_Response_t *response = (MCU_Response_t *)I2C_IT_GetpTxBuf(&I2cWire);
-	//--------------------------
-	LED_ACT_Toggel();//Отладка
-	//Разбор пришедшего запроса
-	switch(request->CmdCode)
-	{
-		//-------------------
-		case(cmdGetCurrentPosition):
-				//LED_ACT_Toggel();
-				//spiData = ENCODER_GetVal();
-		break;
-		//-------------------
-		case(cmdGetCurrentAcceleration):
-		//LED_ACT_Toggel();
-		break;
-		//-------------------
-		case(cmdGetCurrentVelocity):
-		//LED_ACT_Toggel();
-		break;
-		//-------------------
-		case(cmdSetTargetPosition):
-		//LED_ACT_Toggel();
-		break;
-		//-------------------
-		case(cmdSetMaxAcceleration):
-		//LED_ACT_Toggel();
-		break;
-		//-------------------
-		case(cmdSetMaxVelocity):
-				//LED_ACT_Toggel();
-		break;
-		//-------------------
-		case(cmdSetMicrostep):
-				//LED_ACT_Toggel();
-		break;
-		//-------------------
-		case(cmdResetTMC):
-				//LED_ACT_Toggel();
-		break;
-		//-------------------
-		case(cmdResetPosition):
-				//LED_ACT_Toggel();
-		break;
-		//-------------------
-		case(cmdEmergencyStop):
-				//LED_ACT_Toggel();
-		break;
-		//-------------------
-		case(cmdArduinoMicroTS):
-			response->Count   = 5; //Размер пакета в байтах (без поля COUNT)
-			response->CmdCode = cmdArduinoMicroTS;
-			*(uint32_t*)&response->Payload[0] = RTOS_GetTickCount();
-		break;
-		//-------------------
-		case(cmdArduinoMeasurePulseCalibration):
-				//LED_ACT_Toggel();
-		break;
-		//-------------------
-		case(cmdArduinoGetPulseCalibration):
-				//LED_ACT_Toggel();
-		break;
-		//-------------------
-		case(cmdGetEncoderPosition):
-			response->Count   = 15; //Размер пакета в байтах (без поля COUNT)
-			response->CmdCode = cmdGetEncoderPosition;
-
-			response->Payload[0] = 0xA0; //u8 SPI status      - заглушка
-			response->Payload[1] = 0xA1; //u8 TMC reg address - заглушка
-
-			*(uint32_t*)&response->Payload[6]  = MICRO_DELAY_GetCount(); //u32 beginTS
-			*(uint32_t*)&response->Payload[2]  = ENCODER_GetVal(); 	     //u32 data
-			*(uint32_t*)&response->Payload[10] = MICRO_DELAY_GetCount(); //u32 endTS
-		break;
-		//-------------------
-		case(cmdGetTemperature):
-			response->Count   = 5; 			      // Размер пакета в байтах (без поля COUNT)
-			response->CmdCode = cmdGetTemperature;// Команда
-			if(request->Payload[0] == 1) TEMP_SENSE_BuildPack(&Sensor_1, response->Payload);//Запрос для первого датчика температуры
-			else 						 TEMP_SENSE_BuildPack(&Sensor_2, response->Payload);//Запрос для второго датчика температуры
-		break;
-		//-------------------
-		default:
-
-		break;
-		//-------------------
-	}
-	I2C_IT_SetTxSize(&I2cWire, response->Count+1);//Кол-во байтов в ответе(с полем COUNT).
-}
-//************************************************************
-void I2cTxParsing(void){
-
-}
-//*******************************************************************************************
-//*******************************************************************************************
 //*******************************************************************************************
 //*******************************************************************************************
 //Работа с энкодером AMM3617.Энкодер выдает 17-тибитный код Грея.
-#define ENCODER_NUM_STEP 		131072 					         //количество шагов энкодера на один оборот
+#define ENCODER_NUM_STEP 		65536//131072 					 //количество шагов энкодера на один оборот
 #define ENCODER_DEGREE_QUANT  	(float)(360.0 / ENCODER_NUM_STEP)//количество градусов в одном наге энкодера.
 
 //#define ENCODER_TIMEOUT 		(30 / 10)			      //деление на 10 так как uSecTick = 10 мкСек.
@@ -255,18 +150,46 @@ void BuildAndSendTextBuf(uint32_t timeStamp, uint32_t encodTicks, uint32_t angle
 //*******************************************************************************************
 void Task_Motor(void){
 
-	static uint32_t flag = 0;
+	//Пример расчета:
+	//Макс.скорость - 10 RPM, это = 10*2*Pi = 62.8319 рад/мин, или 1,0472 рад/сек.   1,0472/ 0,01 = 104,72 ~ 105 (in 0.01*rad/sec).
+	//Ускорение  - 20 RPM^2, это = 20*2*Pi = 125.6637 рад/мин^2, или 0,035 рад/сек^2. 0,035 / 0,01 = 3,49   ~ 3	 (in 0.01*rad/sec^2).
+	//Замедление - 20 RPM^2, расчет тотже что и при ускорении.
+	//Шаги - мне нужно повернуться на 360 градусов. Это 6400 шагов при microstep = 1/32
 
-	if(!flag)
-	{
-		MOTOR_SpinStart(MOTOR_DECEL);
-		flag = 1;
-	}
-	else
-	{
-		MOTOR_SpinStart(MOTOR_ACCEL);
-		flag = 0;
-	}
+	// param step   Number of steps to move (pos - CW, neg - CCW).
+	// param accel  Accelration to use, in 0.01*rad/sec^2.
+	// param decel  Decelration to use, in 0.01*rad/sec^2.
+	// param speed  Max speed, in 0.01*rad/sec.
+
+	uint32_t RPM        = 100;     //Скорость оборотов в минуту
+	uint32_t accel_RPMM = 360*10; //Ускорение оборотов в минуту за минуту
+	uint32_t angle		= 120;    //Угол на который нужно переместить вал камеры в градусах.
+
+	uint32_t microSteps        = (uint32_t)MOTOR_FULL_STEPS_PER_TURN * MOTOR_GetMicrostep();
+	uint32_t steps			   = (uint32_t)(angle      * 6 * microSteps / (float)360.0);  //6 - передаточное число редуктора
+	uint32_t vel_rad_per_sec   = (uint32_t)(RPM        * 2 * (float)3.14159 / 60   * 100);//скорость рад в сек
+	uint32_t accel_rad_per_sec = (uint32_t)(accel_RPMM * 2 * (float)3.14159 / 3600 * 100);//Ускорение рад в секунду за секунд
+
+	MOTOR_SpeedCntrMove(-1*steps, 		   //param step   Number of steps to move
+						accel_rad_per_sec, //param accel  Accelration to use, in 0.01*rad/sec^2.
+						accel_rad_per_sec, //param decel  Decelration to use, in 0.01*rad/sec^2.
+						vel_rad_per_sec);  //param speed  Max speed, in 0.01*rad/sec.
+
+
+
+//	static uint32_t flag = 0;
+//	if(!flag)
+//	{
+//		flag = 1;
+//		MOTOR_SpeedCntrMove(6400*6, 100, 100, 840);
+//		//MOTOR_Move(360*5, 5, 100, 500);
+//	}
+//	else
+//	{
+//		flag = 0;
+//		MOTOR_SpeedCntrMove(-6400*6, 100, 100, 840);
+//		//MOTOR_Move(-360*5, 5, 100, 500);
+//	}
 }
 //*******************************************************************************************
 //*******************************************************************************************
@@ -276,10 +199,12 @@ int main(void){
 
 	//***********************************************
 	//Инициализация периферии STM32.
-	STM32_Clock_Init();
+ 	STM32_Clock_Init();
 	GPIO_Init();
 	MICRO_DELAY_Init();
-	ADC_Init();
+	//***********************************************
+	//Инициализация программного модуля работы с питанием MCU
+	POWER_Init();
 	//***********************************************
 	//Инициализация кнопки.
 	PwrButton.GPIO_PORT = MCU_PWR_BUTTON_GPIO;
@@ -287,71 +212,34 @@ int main(void){
 	PwrButton.State		= BUTTON_RELEASE;
 	BUTTON_Init(&PwrButton);
 	//***********************************************
-	MICRO_DELAY(100000);	//100mS - Эта задержка нужна для стабилизации напряжения патания.
+	MICRO_DELAY(100000);//100mS - Эта задержка нужна для стабилизации напряжения патания.
 	//Включение питания платы.
-//	while(BUTTON_GetState(&PwrButton) != BUTTON_RELEASE){};//Пока кнопку не отпустя плата не включится.
-//	{
-//		if(BUTTON_GetState(&PwrButton) == BUTTON_LONG_PRESS) LED_ACT_High();
-//	}
-
 	MCU_EN_High();
 	FAN_EN_High();
 	GPS_EN_High();
 	LIDAR_EN_High();
 //	LAMP_PWM_High();
-
-	MICRO_DELAY(500000);//Эта задержка нужна для стабилизации напряжения патания.
+	//MICRO_DELAY(100000);//Эта задержка нужна для стабилизации напряжения патания включенной приферии MCU.
 	//***********************************************
-	//Инициализация DS18B20.
-	Sensor_1.SensorNumber = 1;
-	Sensor_1.GPIO_PORT    = GPIOB;
-	Sensor_1.GPIO_PIN     = 14;
-	Sensor_1.Resolution   = DS18B20_Resolution_12_bit;
-	TemperatureSens_Init(&Sensor_1);
-	TemperatureSens_StartConvertTemperature(&Sensor_1);
-
-	Sensor_2.SensorNumber = 2;
-	Sensor_2.GPIO_PORT    = GPIOB;
-	Sensor_2.GPIO_PIN     = 15;
-	Sensor_2.Resolution   = DS18B20_Resolution_12_bit;
-	TemperatureSens_Init(&Sensor_2);
-	TemperatureSens_StartConvertTemperature(&Sensor_2);
-	//***********************************************
-	//Ининциализация энкодера.
-	ENCODER_Init();
-	//***********************************************
-	//Ининциализация оптических дадчитков наличия крышки объетива и наличия АКБ.
-	OPT_SENS_Init();
-	//***********************************************
-	USART_Init(USART1, 57600);
-	//***********************************************
-	//Инициализация I2C Slave для работы по прерываниям.
-	I2cWire.i2c 		  = I2C2;
-	I2cWire.i2cMode		  = I2C_MODE_SLAVE;
-	I2cWire.i2cGpioRemap  = I2C_GPIO_NOREMAP;
-	I2cWire.slaveAddr	  = 0x05;
-	I2cWire.i2cRxCallback = I2cRxParsing;
-	I2cWire.i2cTxCallback = I2cTxParsing;
-	I2C_IT_Init(&I2cWire);
+//	TEMPERATURE_SENSE_Init();	//Инициализация датчиков температуры.
+//	OPT_SENS_Init();			//Инициализация оптических дадчитков наличия крышки объетива и наличия АКБ.
+//	PROTOCOL_I2C_Init();		//Инициализация протокола обмена.
+	ENCODER_Init();				//Инициализация энкодера.
+	USART_Init(USART1, 57600);	//
 	//***********************************************
 	//Инициализация	драйвера мотора.
-	//motorTab[3200] = 0xffff;
-
 	MOTOR_Init();
-	MOTOR_Move(360, 0, 20, 1500);
-
 
 //	MOTOR_CalcAccelDecel(0, 300, 1500);
 //	MOTOR_SpinStart(MOTOR_ACCEL);
-
 	//MOTOR_SetMaxVelocity(400); //Задание скорости в RPM
 	//***********************************************
 	//Ини-я диспетчера.
 	RTOS_Init();
-	RTOS_SetTask(Task_ReadTemperature,  50, 1000);//запуск задачи через 50мс и спериодом повторения 1000мс
-	RTOS_SetTask(Task_PwrButtonPolling, 50, 100); //запуск задачи через 50мс и спериодом повторения 100мс
+	RTOS_SetTask(Task_ReadTemperature,  0, 1000);//запуск задачи через 0мс и спериодом повторения 1000мс
+	RTOS_SetTask(Task_PwrButtonPolling, 0, 100); //запуск задачи через 0мс и спериодом повторения 100мс
 
-	//RTOS_SetTask(Task_Motor, 5000, 5000);
+	RTOS_SetTask(Task_Motor, 1000, 5000);
 	//***********************************************
 	SysTick_Init();
 	__enable_irq();
@@ -375,8 +263,8 @@ void SysTick_IT_Handler(void){
 	//--------------------------
 	OPT_SENS_CheckLoop();		  //Опрос состояния сенсоров наличия крышки объектива и наличия АКБ.
 	BUTTON_CheckLoop(&PwrButton); //Опрос кнопки.
-	//------------------------------------------
-	//Работа с энкодером
+	//**************************************************************
+	//Работа с энкодером. Для отладки данные предаются по USART на кудахтер.
 	static uint32_t mSecCount = 0;
 	//Формирование таймстемпов
 	sysTick++;
@@ -389,9 +277,9 @@ void SysTick_IT_Handler(void){
 		//__disable_irq();
 		//LED_ACT_High();
 		//Чтение заначения энкодера. ~9,5 мкС
-		EncoderTicks = ENCODER_GetVal();
+		EncoderTicks = ENCODER_GetCode();
 		//LED_ACT_Low();
-		//Расчет значений для будущего расчета скрости.
+		//Расчет значений для расчета скрости.
 		Angle = ENCODER_DEGREE_QUANT * EncoderTicks;  //расчет угла поворота вала энкодера.
 		if(OldAngle > Angle) OldAngle -= 360.0;		  //Это нужно для корректного расчета скорости при переходе от 359 к 0 градусов.
 		DeltaAngle = Angle - OldAngle;         		  //приращение угла
@@ -399,16 +287,14 @@ void SysTick_IT_Handler(void){
 		//Расчет скорости вращения.
 		RPM = DeltaAngle * QUANT_FOR_100mS;
 		OldAngle = Angle;
-		//Передаем данные
+		//Передаем данные по USART на кудахтер.
 		BuildAndSendTextBuf(sysTick,
 							EncoderTicks,
 							(uint32_t)(Angle*1000),
-							(uint32_t)(RPM*120)); //умножаем на 120 т.к. передаточное число редуктора 120.
+							(uint32_t)(RPM*6)); //6 - это передаточное число редуктора.
 		//__enable_irq();
 	}
-	//------------------------------------------
-	MOTOR_AccelDecelLoop();	//Отладка работы мотора.
-	//------------------------------------------
+	//**************************************************************
 }
 //*******************************************************************************************
 //*******************************************************************************************

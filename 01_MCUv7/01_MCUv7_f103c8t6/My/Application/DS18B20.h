@@ -73,7 +73,12 @@ void     TemperatureSens_ReadTemperature(DS18B20_t *sensor);
 uint32_t TemperatureSens_Sign(DS18B20_t *sensor);
 uint32_t TemperatureSens_Temperature(DS18B20_t *sensor);
 
-void TEMP_SENSE_BuildPack(DS18B20_t *sensor, uint8_t *buf);
+
+//*******************************************************************************************
+//*******************************************************************************************
+void TEMPERATURE_SENSE_Init(void);
+void TEMPERATURE_SENSE_Loop(void);
+void TEMPERATURE_SENSE_BuildPack(uint32_t numSensor, uint8_t *buf);
 
 //*******************************************************************************************
 //*******************************************************************************************

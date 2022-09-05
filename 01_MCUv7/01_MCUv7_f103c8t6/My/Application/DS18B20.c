@@ -334,8 +334,43 @@ uint32_t TemperatureSens_Temperature(DS18B20_t *sensor){
 
 	return sensor->Temperature;
 }
+//*******************************************************************************************
+//*******************************************************************************************
+
+static DS18B20_t TemperatureSensor_1;
+static DS18B20_t TemperatureSensor_2;
+
+//*******************************************************************************************
+void TEMPERATURE_SENSE_Init(void){
+
+	TemperatureSensor_1.SensorNumber = 1;
+	TemperatureSensor_1.GPIO_PORT    = GPIOB;
+	TemperatureSensor_1.GPIO_PIN     = 14;
+	TemperatureSensor_1.Resolution   = DS18B20_Resolution_12_bit;
+	TemperatureSens_Init(&TemperatureSensor_1);
+	TemperatureSens_StartConvertTemperature(&TemperatureSensor_1);
+
+	TemperatureSensor_2.SensorNumber = 2;
+	TemperatureSensor_2.GPIO_PORT    = GPIOB;
+	TemperatureSensor_2.GPIO_PIN     = 15;
+	TemperatureSensor_2.Resolution   = DS18B20_Resolution_12_bit;
+	TemperatureSens_Init(&TemperatureSensor_2);
+	TemperatureSens_StartConvertTemperature(&TemperatureSensor_2);
+}
 //**********************************************************
-void TEMP_SENSE_BuildPack(DS18B20_t *sensor, uint8_t *buf){
+void TEMPERATURE_SENSE_Loop(void){
+
+	TemperatureSens_ReadTemperature(&TemperatureSensor_1);
+	TemperatureSens_ReadTemperature(&TemperatureSensor_2);
+}
+//**********************************************************
+void TEMPERATURE_SENSE_BuildPack(uint32_t numSensor, uint8_t *buf){
+
+	DS18B20_t *sensor;
+	//---------------------
+		 if(numSensor == 1) sensor = &TemperatureSensor_1;
+	else if(numSensor == 2) sensor = &TemperatureSensor_2;
+	else return;
 
 	buf[0] = (uint8_t) sensor->TemperatureSign;
 	buf[1] = (uint8_t)(sensor->Temperature >> 8);

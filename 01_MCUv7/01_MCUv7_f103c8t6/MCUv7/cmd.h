@@ -11,11 +11,13 @@ typedef enum{
     cmdGetCurrentPosition       		= 0x00, /**< получить текущий угол */
     cmdGetCurrentAcceleration   		= 0x01, /**< получить текущее ускорение */
     cmdGetCurrentVelocity       		= 0x02, /**< получить текущую скорость */
+
     cmdSetTargetPosition        		= 0x03, /**< задать целевое положение */
     cmdSetMaxAcceleration       		= 0x04, /**< задать максимальное ускорение */
     cmdSetMaxVelocity           		= 0x05, /**< задать максимальную скорость */
     cmdSetMicrostep             		= 0x06, /**< задать микрошаг */
-    cmdResetTMC                 		= 0x07, /**< сбросить чип */
+
+//    cmdResetTMC                 		= 0x07, /**< сбросить чип */
     cmdResetPosition            		= 0x08, /**< сбросить позицию */
     cmdEmergencyStop            		= 0x09, /**< аварийная остановка. Актуальна при застреваниях */
 
@@ -24,10 +26,10 @@ typedef enum{
     cmdArduinoMeasurePulseCalibration 	= 0x0B,
     cmdArduinoGetPulseCalibration 		= 0x0C, /**< получить измеренное значение таймера с помощью команды #cmdArduinoMeasurePulseCalibration */
     cmdEnableStealthChop          		= 0x0D, /**< активировать бесшумный режим */
-    cmdReadTMC4361Register        		= 0x0E, /**< прочитать значение регистра чипа tmc4361 */
-    cmdWriteTMC4361Register    	  		= 0x0F, /**< задать значение регистра чипа tmc4361 */
-    cmdReadTMC2130Register     	    	= 0x10, /**< прочитать значение регистра чипа tmc2130 */
-    cmdWriteTMC2130Register        		= 0x11, /**< задать значение регистра чипа tmc2130 */
+//    cmdReadTMC4361Register        		= 0x0E, /**< прочитать значение регистра чипа tmc4361 */
+//    cmdWriteTMC4361Register    	  		= 0x0F, /**< задать значение регистра чипа tmc4361 */
+//    cmdReadTMC2130Register     	    	= 0x10, /**< прочитать значение регистра чипа tmc2130 */
+//    cmdWriteTMC2130Register        		= 0x11, /**< задать значение регистра чипа tmc2130 */
     cmdEnableChopper 					= 0x12, /**<  */
 
     cmdSetEncoderConstant 				= 0x13, /**< Установить константу для энкодера. */
@@ -76,6 +78,11 @@ typedef enum{
     cmdConfigEncoder 				= 0x37,
     cmdFirmwareVersion 				= 0x38,
     cmdSignal          				= 0x39, /**< @brief Команда отправляет сигнал пользователю. */
+
+	cmdGetSupplyVoltage				= 0x40, //Команда возвращает напряжение питания платы MCU, в мВ.
+
+	//Отладочные команды
+	cmdGetSenseState = 0x41,
 
     mcuCmdMapSize
 }MCU_Cmd_t;
