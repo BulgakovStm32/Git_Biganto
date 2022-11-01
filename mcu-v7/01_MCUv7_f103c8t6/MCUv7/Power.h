@@ -21,10 +21,16 @@
 
 #define BATTERY_VOLTAGE_MIN		10800	//Минимально напряжение питания, в мВ
 #define BATTERY_VOLTAGE_WARNING	12000	//Напряжение при котором нужно обратить внимание на заряд АКБ, в мВ.
-//Кнопка включения питания
-#define MCU_PWR_BUTTON_GPIO	GPIOB
-#define MCU_PWR_BUTTON_PIN	3
 
+// MCU_PWR_PBN - PB7 - вход. Кнопка включения питания.
+#define MCU_PWR_BTN_GPIO	GPIOB
+#define MCU_PWR_BTN_PIN		7
+
+//Линия питания Big Board (BB_PWR_OK) - PA12
+#define BB_PWR_OK_GPIO		GPIOA
+#define BB_PWR_OK_PIN		12
+
+//**********************************
 typedef enum{
 	RELEASE = 0, //отпускание кнопки
 	PRESS,       //нажатие на кнопку
@@ -44,8 +50,11 @@ typedef struct{
 //*******************************************************************************************
 void	 	     POWER_Init(void);
 uint32_t 	     POWER_GetSupplyVoltage(void);
+void 			 POWER_SupplyVoltageCheck(void);
 PowerFlag_t*     POWER_Flags(void);
 PwrButtonState_t POWER_PwrButton(void);
+void 			 POWER_PwrButtonLed(uint32_t sate);
+uint32_t 		 POWER_GetBigBoardPwr(void);
 
 //*******************************************************************************************
 //*******************************************************************************************

@@ -51,7 +51,7 @@ typedef enum {
 //-----------------------------------
 //Заводские настройки.
 #define MOTOR_DEFAULT_MICROSTEP			STEP_32	//количество микрошагов
-#define MOTOR_DEFAULT_REDUCER_RATE		6		//передаточное чисо редуктора
+#define MOTOR_DEFAULT_REDUCER_RATE		1		//передаточное чисо редуктора
 #define MOTOR_DEFAULT_ACCEL_TIME_mS		1500	//время ускорения/замедлениия в мС
 #define MOTOR_DEFAULT_RPM				1		//скорость в RPM
 
@@ -87,8 +87,8 @@ void MOTOR_EmergencyStopRotation(void);
 
 
 
-void 			MOTOR_Disable(void);
-void            MOTOR_Enable(void);
+void MOTOR_Disable(void);
+void MOTOR_Enable(void);
 //*******************************************************************************************
 //*******************************************************************************************
 //Реализация управления мотора по статье

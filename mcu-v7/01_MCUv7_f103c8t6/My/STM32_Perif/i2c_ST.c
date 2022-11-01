@@ -313,7 +313,7 @@ void I2C_Slave_Init(I2C_TypeDef *i2c, uint32_t remap, uint32_t slaveAddr, uint32
 static I2C_IT_t	*i2c1_IT_Define;
 static I2C_IT_t	*i2c2_IT_Define;
 
-static uint8_t crc = 0xff;
+//static uint8_t crc = 0xff;
 //*******************************************************************************************
 //*******************************************************************************************
 void I2C_IT_Init(I2C_IT_t *i2cIt){

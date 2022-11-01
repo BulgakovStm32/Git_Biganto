@@ -46,8 +46,16 @@ void GPS_Init(void){
 //**********************************************************
 void GPS_PowerControl(uint32_t state){
 
-	if(state == GPS_POWER_ON) GPS_EN_High(); //Вкл.
-	else				   	  GPS_EN_Low();  //Откл.
+	if(state == GPS_POWER_ON)
+	{
+		GPS_EN_High(); //Вкл.
+		USART_DMA_Enable(GPS_USART);
+	}
+	else
+	{
+		GPS_EN_Low();  //Откл.
+		USART_DMA_Disable(GPS_USART);
+	}
 }
 //**********************************************************
 

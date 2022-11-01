@@ -34,17 +34,36 @@ typedef struct{
 }MCU_Response_t;
 #pragma pack(pop)//вернули предыдущую настройку.
 //****************************************************
+typedef union{
+	struct{
+		uint32_t PwrEvent :2;		//PWR_EVENT (R) - событие выключения
+									//0 - ничего
+									//1 - произошёл запрос на выключение
+									//2 - происходит выключение
+
+		uint32_t f_PwrOff :1;		//PWR_OFF (R) - бит текущего состояния выключения питания
+									//0 - остальные режимы работы
+									//1 - пришла команда cmdTurnOffPower,
+		uint32_t dummy :28;
+	}Flags;
+	uint32_t BLK;
+}MCU_SystemCtrlReg_t;
+//****************************************************
 //флаги приема команд.
 typedef struct{
-	uint32_t	f_cmdMotorTorqueCtrl   : 1; //пришла команда Вкл./Откл. момента удержания ШД.
-	uint32_t	f_cmdSetTargetPosition : 1; //пришла команда на запуск вращения.
-	uint32_t	dummy	     	 	   : 30;
-}ProtocolCmdFlag_t;
+//	uint32_t f_CmdMotorTorqueCtrl   :1; //пришла команда Вкл./Откл. момента удержания ШД.
+//	uint32_t f_CmdSetTargetPosition :1; //пришла команда на запуск вращения.
+	uint32_t f_Led  				:1;
+	uint32_t f_CmdTurnOff 			:1; //пришла команда отключения питания.
+	uint32_t dummy	     	 	   	:30;
+}ProtocolFlag_t;
 //*******************************************************************************************
 //*******************************************************************************************
-void 	 PROTOCOL_I2C_Init(void);
-void 	 PROTOCOL_I2C_IncTimeoutAndResetI2c(void);
-uint32_t PROTOCOL_I2C_GetResetCount(void);
+void 	 	    PROTOCOL_I2C_Init(void);
+void 	 	    PROTOCOL_I2C_IncTimeoutAndResetI2c(void);
+uint32_t 		PROTOCOL_I2C_GetResetCount(void);
+ProtocolFlag_t* PROTOCOL_I2C_Flags(void);
+MCU_SystemCtrlReg_t* PROTOCOL_I2C_SystemCtrlReg(void);
 
 //*******************************************************************************************
 //*******************************************************************************************

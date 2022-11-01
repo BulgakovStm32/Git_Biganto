@@ -12,15 +12,17 @@
 //*******************************************************************************************
 //*******************************************************************************************
 
-static I2C_IT_t I2cWire;
-static uint32_t ledFlag = 0;
-//static ProtocolCmdFlag_t protocolCmdFlags;
+static I2C_IT_t 		   I2cWire;
+static ProtocolFlag_t 	   protocolFlags;
+static MCU_SystemCtrlReg_t systemCtrlReg;
+//*******************************************************************************************
+//*******************************************************************************************
 //*******************************************************************************************
 //*******************************************************************************************
 static void _protocol_RequestParsing(void){
 
-	MCU_Request_t  *request  = (MCU_Request_t *) I2C_IT_GetpRxBuf(&I2cWire);
-	MCU_Response_t *response = (MCU_Response_t *)I2C_IT_GetpTxBuf(&I2cWire);
+	volatile MCU_Request_t  *request  = (MCU_Request_t *) I2C_IT_GetpRxBuf(&I2cWire);
+	volatile MCU_Response_t *response = (MCU_Response_t *)I2C_IT_GetpTxBuf(&I2cWire);
 	uint32_t temp;
 	uint8_t  cmd;
 	//--------------------------
@@ -29,9 +31,9 @@ static void _protocol_RequestParsing(void){
 	volatile uint8_t crcReq  = request->Payload[request->Count-1];
 	if(crcCalc != crcReq) return;//если CRC не совпадает то выходим.
 	//--------------------------
-	I2cWire.timeOut = 0; 	//Сброс таймаута.
-	ledFlag 		= 1; 	//Индикация приема пакета.
-	cmd = request->CmdCode; //
+	I2cWire.timeOut 	= 0; 		//Сброс таймаута.
+	protocolFlags.f_Led	= FLAG_SET;	//Индикация приема пакета.
+	cmd = request->CmdCode;			//
 	//DELAY_microS(50);//Отладка.
 	//Разбор пришедшего запроса
 	switch(cmd)
@@ -95,10 +97,9 @@ static void _protocol_RequestParsing(void){
 			temp = *(uint32_t*)&request->Payload[0];
 			if(MOTOR_GetSpeedRampState() == STOP)
 			{
-				MOTOR_SetPosition(temp);
+				MOTOR_SetPosition((int32_t)temp);
 				RTOS_SetTask(MOTOR_StartRotate, 0, 0);//запуск вращения.
 			}
-
 			//Ответ на команду.
 			response->Count   = 2;   //Размер пакета в байтах (без поля COUNT)
 			response->CmdCode = cmd; //код команды
@@ -108,13 +109,13 @@ static void _protocol_RequestParsing(void){
 
 		//*******************************************
 		//*******************************************
-		case(cmdArduinoMicroTS):
+		case(cmdGetMillisCount):
 			response->Count   = 5;   //Размер пакета в байтах (без поля COUNT)
 			response->CmdCode = cmd; //код команды
 			*(uint32_t*)&response->Payload[0] = RTOS_GetTickCount();
 		break;
 		//-------------------
-		case(cmdGetEncoderPosition):
+		case(cmdGetEncoderAngle):
 			response->Count   = 15;  //Размер пакета в байтах (без поля COUNT)
 			response->CmdCode = cmd; //код команды
 
@@ -122,7 +123,7 @@ static void _protocol_RequestParsing(void){
 			response->Payload[1] = 0xA1; //u8 TMC reg address - заглушка
 
 			*(uint32_t*)&response->Payload[6]  = DELAY_microSecCount(); 		//u32 beginTS
-			temp = (uint32_t)(ENCODER_DEGREE_QUANT * ENCODER_GetCode() * 1000); //расчет угла поворота вала энкодера.
+			temp = (uint32_t)(ENCODER_GetAngleQuant() * ENCODER_GetCode() * 1000.0); //расчет угла поворота вала энкодера.
 			*(uint32_t*)&response->Payload[2]  = temp;	     					//u32 data
 			*(uint32_t*)&response->Payload[10] = DELAY_microSecCount(); 		//u32 endTS
 		break;
@@ -131,6 +132,12 @@ static void _protocol_RequestParsing(void){
 			response->Count   = 5;   // Размер пакета в байтах (без поля COUNT)
 			response->CmdCode = cmd; //код команды
 			TEMPERATURE_SENSE_BuildPack(request->Payload[0], response->Payload);
+		break;
+		//-------------------
+		case(cmdGetSystemCtrlReg):
+			response->Count   = 5;   //Размер пакета в байтах (без поля COUNT)
+			response->CmdCode = cmd; //код команды
+			*(uint32_t*)&response->Payload[0] = systemCtrlReg.BLK;
 		break;
 		//*******************************************
 		//*******************************************
@@ -170,7 +177,11 @@ static void _protocol_TxParsing(void){
 }
 //*******************************************************************************************
 //*******************************************************************************************
+//*******************************************************************************************
+//*******************************************************************************************
 void PROTOCOL_I2C_Init(void){
+
+	systemCtrlReg.BLK = 0;
 
 	//Инициализация I2C Slave для работы по прерываниям.
 	I2cWire.i2c		  = I2C2;
@@ -201,12 +212,12 @@ void PROTOCOL_I2C_IncTimeoutAndResetI2c(void){
 	}
 	//Индикация обмена. Мигаем светодиодом.
 	static uint32_t ledCount = 0;
-	if(ledFlag)
+	if(protocolFlags.f_Led == FLAG_SET)
 	{
 		if(++ledCount >= 50)
 		{
 			ledCount = 0;
-			ledFlag  = 0;
+			protocolFlags.f_Led == FLAG_CLEAR;
 			LED_ACT_Toggel();
 		}
 	}
@@ -215,6 +226,16 @@ void PROTOCOL_I2C_IncTimeoutAndResetI2c(void){
 uint32_t PROTOCOL_I2C_GetResetCount(void){
 
 	return I2cWire.resetCount;
+}
+//**********************************************************
+ProtocolFlag_t* PROTOCOL_I2C_Flags(void){
+
+	return &protocolFlags;
+}
+//**********************************************************
+MCU_SystemCtrlReg_t* PROTOCOL_I2C_SystemCtrlReg(void){
+
+	return &systemCtrlReg;
 }
 //*******************************************************************************************
 //*******************************************************************************************

@@ -16,6 +16,8 @@
 
 //*******************************************************************************************
 //*******************************************************************************************
+//*******************************************************************************************
+//*******************************************************************************************
 //Функция задержки в микросекундах.
 __STATIC_INLINE void _oneWire_usDelay(uint32_t us){
 
@@ -99,37 +101,6 @@ static uint32_t _oneWire_ReadData(GPIO_TypeDef *const port, uint32_t pin, uint32
 		data |= _oneWire_ReadBit(port, pin) << i;
 	}
 	return data;
-}
-//*******************************************************************************************
-//*******************************************************************************************
-//*******************************************************************************************
-//*******************************************************************************************
-static void _ds18b20_ReadScratchPad(DS18B20_t *sensor){
-
-	int16_t temperature;
-	uint8_t crcCalc = 0;
-	//---------------------
-	//Чтение блокнота (9 байт) из DS18B20
-	for(uint32_t i = 0; i < 9; i++)
-	{
-		sensor->ScratchPad.Blk[i]= _oneWire_ReadData(sensor->GPIO_PORT, sensor->GPIO_PIN, 8);
-	}
-	//Проверка CRC
-	crcCalc = CRC8_TableOneWire(sensor->ScratchPad.Blk, 8);
-	if(sensor->ScratchPad.Str.Crc != crcCalc) return;
-	//Собираем температуру.
-	temperature = (sensor->ScratchPad.Str.Temperature_MSB << 8) |
-				   sensor->ScratchPad.Str.Temperature_LSB;
-	//Знак температуры.
-	if(temperature < 0)
-	{
-		sensor->TemperatureSign = DS18B20_SIGN_NEGATIVE;
-		temperature  = (temperature ^ 0xFFFF) + 1;
-		temperature &= 0x0FFF;//Маска для выделения 12 бит.???Возможно не нужна.
-	}
-	else sensor->TemperatureSign = DS18B20_SIGN_POSITIVE;
-	//Расчет температуры
-	sensor->Temperature = (uint32_t)(((temperature * 625) + 500) / 1000);
 }
 //**********************************************************
 /*! \brief  Sends the SEARCH ROM command and returns 1 id found on the
@@ -245,6 +216,8 @@ static void _ds18b20_ReadScratchPad(DS18B20_t *sensor){
 //}
 //*******************************************************************************************
 //*******************************************************************************************
+//*******************************************************************************************
+//*******************************************************************************************
 static void _ds18b20_GpioInit(DS18B20_t *sensor){
 
 	if(!sensor->GPIO_PORT) return;	//Проверка. Не опрделен порт - значит нет датчика. Выходим.
@@ -269,6 +242,34 @@ static void _ds18b20_Init(DS18B20_t *sensor){
 	_ds18b20_GpioInit(sensor);
 	_ds18b20_SetResolution(sensor);
 	sensor->Temperature = 0xFFFFFFFF;
+}
+//**********************************************************
+static void _ds18b20_ReadScratchPad(DS18B20_t *sensor){
+
+	int16_t temperature;
+	uint8_t crcCalc = 0;
+	//---------------------
+	//Чтение блокнота (9 байт) из DS18B20
+	for(uint32_t i = 0; i < 9; i++)
+	{
+		sensor->ScratchPad.Blk[i]= _oneWire_ReadData(sensor->GPIO_PORT, sensor->GPIO_PIN, 8);
+	}
+	//Проверка CRC
+	crcCalc = CRC8_TableOneWire(sensor->ScratchPad.Blk, 8);
+	if(sensor->ScratchPad.Str.Crc != crcCalc) return;
+	//Собираем температуру.
+	temperature = (sensor->ScratchPad.Str.Temperature_MSB << 8) |
+				   sensor->ScratchPad.Str.Temperature_LSB;
+	//Знак температуры.
+	if(temperature < 0)
+	{
+		sensor->TemperatureSign = DS18B20_SIGN_NEGATIVE;
+		temperature  = (temperature ^ 0xFFFF) + 1;
+		temperature &= 0x0FFF;//Маска для выделения 12 бит.???Возможно не нужна.
+	}
+	else sensor->TemperatureSign = DS18B20_SIGN_POSITIVE;
+	//Расчет температуры
+	sensor->Temperature = (uint32_t)(((temperature * 625) + 500) / 1000);
 }
 //**********************************************************
 static void _ds18b20_StartConvertTemperature(DS18B20_t *sensor){
@@ -298,10 +299,13 @@ static void _ds18b20_ReadTemperature(DS18B20_t *sensor){
 }
 //*******************************************************************************************
 //*******************************************************************************************
+//*******************************************************************************************
+//*******************************************************************************************
 
 static DS18B20_t TemperatureSensor_1;
 static DS18B20_t TemperatureSensor_2;
 
+//*******************************************************************************************
 //*******************************************************************************************
 void TEMPERATURE_SENSE_Init(void){
 
@@ -350,6 +354,8 @@ void TEMPERATURE_SENSE_BuildPack(uint32_t numSensor, uint8_t *buf){
 	buf[2] = (uint8_t) sensor->Temperature;
 	buf[3] = (uint8_t) sensor->SensorNumber; // sensorsNum
 }
+//*******************************************************************************************
+//*******************************************************************************************
 //*******************************************************************************************
 //*******************************************************************************************
 

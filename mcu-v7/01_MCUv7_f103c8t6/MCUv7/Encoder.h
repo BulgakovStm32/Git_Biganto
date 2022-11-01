@@ -14,10 +14,18 @@
 
 //*******************************************************************************************
 //*******************************************************************************************
-#define ENCODER_SPI				SPI1
-#define ENCODER_RESOLUTION_BIT	16
-#define ENCODER_NUM_STEP 		65536//131072 					        //количество шагов энкодера на один оборот
-#define ENCODER_DEGREE_QUANT  	(float)(360.0 / ENCODER_NUM_STEP)//количество градусов в одном наге энкодера. *1000 что бы были значи после запятой
+#define ENCODER_SPI						SPI1
+#define ENCODER_SPI_READ_BIT_NUM		(3 * 8) //Выиитывается 24 бита
+
+#define ENCODER_TYPE_BIN				0
+#define ENCODER_TYPE_GRAY				1
+
+#define ENCODER_RESOLUTION_BIT_MIN		1
+#define ENCODER_RESOLUTION_BIT_MAX		23
+//-----------------------------------
+#define ENCODER_DEFAULT_RESOLUTION_BIT	16
+#define ENCODER_DEFAULT_TYPE			ENCODER_TYPE_BIN
+
 //-----------------------------------
 typedef enum {
 	ENCODER_NO_INIT = 0,
@@ -26,11 +34,13 @@ typedef enum {
 //*******************************************************************************************
 //*******************************************************************************************
 void 	 ENCODER_Init(void);
-uint32_t ENCODER_GetCode(void);
+void     ENCODER_SetConfig(uint16_t config);
+uint16_t ENCODER_GetConfig(void);
+float 	 ENCODER_GetAngleQuant(void);
+int32_t  ENCODER_GetCode(void);
 
-void 	 ENCODER_SetEncoderConstant(uint32_t value);
-uint32_t ENCODER_GetEncoderConstant(void);
-void 	 ENCODER_GetCodeEncoder(uint8_t *buf);
+
+void 	 ENCODER_BuildPack(uint8_t *buf);
 //*******************************************************************************************
 //*******************************************************************************************
 #endif /* MCUV7_ENCODER_H_ */

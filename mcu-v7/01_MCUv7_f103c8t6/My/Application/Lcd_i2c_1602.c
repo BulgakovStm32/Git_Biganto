@@ -16,15 +16,15 @@ static void lcd_send_tetrad(uint8_t byte, uint8_t type){
 	else	 temp &= ~LCD_RS;
 
 	//Передаем тетраду.
-	if(I2C_StartAndSendDeviceAddr(LCD_I2C, LCD_I2C_ADDRESS)) return;
-	I2C_SendData(LCD_I2C, &temp, 1);
-
-	//Шлем строб E в дисплей.
-	temp |= LCD_E;
-	I2C_SendData(LCD_I2C, &temp, 1);
-
-	temp &= ~(LCD_E); 
-	I2C_SendData(LCD_I2C, &temp, 1);
+//	if(I2C_StartAndSendDeviceAddr(LCD_I2C, LCD_I2C_ADDRESS)) return;
+//	I2C_SendData(LCD_I2C, &temp, 1);
+//
+//	//Шлем строб E в дисплей.
+//	temp |= LCD_E;
+//	I2C_SendData(LCD_I2C, &temp, 1);
+//
+//	temp &= ~(LCD_E);
+//	I2C_SendData(LCD_I2C, &temp, 1);
 }
 //***************************************************************
 static void lcd_send(uint8_t byte, uint8_t type){

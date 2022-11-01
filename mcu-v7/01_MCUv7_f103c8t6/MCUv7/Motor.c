@@ -14,18 +14,18 @@
 static MotorState_t motorState = STOP;
 
 //Переменные для работы рампы разгона/торможения шагового двигателя(ШД).
-static SpeedRampData_t speedRamp;   	//структура разгона/торможения
-static uint32_t targetSteps    	   = 0; //количество шагов, которое нужно пройти ШД для премещения на заданный угол.
-static uint32_t stepCount      	   = 0; //счетчик шагов ШД.
+static SpeedRampData_t speedRamp; //структура разгона/торможения
+static uint32_t targetSteps = 0;  //количество шагов, которое нужно пройти ШД для премещения на заданный угол.
+static uint32_t stepCount   = 0;  //счетчик шагов ШД.
 
 //Настраиваемые параметры для работы рампы разгона/торможения шагового двигателя(ШД).
 static MotorStepMode_t microStepsMode    = 0; //кол-во микрошагов на шаг ШД.
 static uint32_t 	   microStepsPerTurn = 0; //кол-во микрошагов на один оборот ШД.
 
-static uint32_t reducerRate    	   = 0;	//передаточное число редуктора.
-static uint32_t accelTime   	   = 0; //время ускорения в милисекундах
-static uint32_t targetVelocity 	   = 0;	//cкорость, оборотов в минуту (RPM)
-static int32_t  targetAngle		   = 0; //угол на который нужно переместить вал камеры в градусах.
+static uint32_t reducerRate    = 0; //передаточное число редуктора.
+static uint32_t accelTime	   = 0; //время ускорения в милисекундах
+static uint32_t targetVelocity = 0; //cкорость, оборотов в минуту (RPM)
+static int32_t  targetAngle	   = 0; //угол на который нужно переместить вал камеры в градусах.
 
 //Значения, который пересчитываются каждый раз при изменении количества микрошагов ШД.
 //#define ALPHA 	 (_2PI / SPR)             	  // 2*pi/spr

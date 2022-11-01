@@ -36,6 +36,7 @@
 #include "OpticSensors.h"
 #include "Power.h"
 #include "Gps.h"
+#include "MCU.h"
 //-------------------------
 #include "Delay.h"
 #include "Blink.h"

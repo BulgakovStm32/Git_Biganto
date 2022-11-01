@@ -117,7 +117,7 @@ void Scheduler_Loop(void){
 	//В противном случае сдвигаем всю очередь
 	else
 		{
-		  for(index = 0; index < TASK_QUEUE_SIZE+1; index++)
+		  for(index = 0; index < TASK_QUEUE_SIZE; index++)
 			{
 			  TaskQueue[index] = TaskQueue[index+1];
 			}

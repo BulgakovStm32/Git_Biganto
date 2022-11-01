@@ -98,10 +98,6 @@
 #define GPIO_PIN_Toggel(gpio, pin)	(gpio->ODR ^= pin)
 
 //**********************************************************
-// MCU_PWR_PBN - PB7 - вход. Кнопка включения питания.
-#define MCU_PWR_BTN_GPIO	GPIOB
-#define MCU_PWR_BTN_PIN		7
-
 
 //#define LedPC13On()     (GPIOC->BSRR = GPIO_BSRR_BS13)
 //#define LedPC13Off()    (GPIOC->BSRR = GPIO_BSRR_BR13)
@@ -123,7 +119,8 @@
 void GPIO_InitForOutputPushPull(GPIO_TypeDef *port, uint32_t pin);
 void GPIO_InitForOutputOpenDrain(GPIO_TypeDef *port, uint32_t pin);
 void GPIO_InitForInputPullUp(GPIO_TypeDef *port, uint32_t pin);
-
+void GPIO_InitForInputPullDown(GPIO_TypeDef *port, uint32_t pin);
+void GPIO_InitForFloatingInput(GPIO_TypeDef *port, uint32_t pin);
 
 void     GPIO_Init     (void);
 void     GPIO_CheckLoop(void);

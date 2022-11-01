@@ -17,11 +17,15 @@
 
 //*******************************************************************************************
 //*******************************************************************************************
-Button_t  PwrButton;
+Button_t PwrButton;
 
-void Task_UartSend(void);
+void DBG_SendDebugInfo(void);
 //*******************************************************************************************
 //*******************************************************************************************
+//Пример использования.
+//if(Led_Blink(RTOS_GetTickCount(), 500, 10)) PWR_BTN_LED_Low();
+//else 										  PWR_BTN_LED_High();
+
 uint32_t Led_Blink(uint32_t millis, uint32_t period, uint32_t switch_on_time){
 
 	static uint32_t millisOld = 0;
@@ -55,49 +59,57 @@ void Task_TEMPERATURE_Read(void){
 //ф-я вызыввается каждые 100мс.
 void Task_POWER_Check(void){
 
-	uint32_t 			count;
-	uint32_t 			supplyVoltage;
+	uint32_t count;
 	BlinkIntervalEnum_t blinkInterval;
 	//-------------------
 	//Проверка напряжения АКБ.
-	supplyVoltage = POWER_GetSupplyVoltage();
-	//Напряженеи НИЖЕ миннимального (10,8В) напряжения АКБ.
-	if(supplyVoltage <= BATTERY_VOLTAGE_MIN) POWER_Flags()->f_BatteryLow = FLAG_SET;
-
-	//Напряжение АКБ НИЖЕ 12В
-	else if(supplyVoltage <= BATTERY_VOLTAGE_WARNING) POWER_Flags()->f_BatteryWarning = FLAG_SET;
-
-	//Напряжение АКБ выше 12в
-	else POWER_Flags()->f_BatteryWarning = FLAG_CLEAR;
-	//-------------------
-	//Отключение питания по нажатию кнопки или низком напряжении АКБ.
-	if(POWER_PwrButton() == PRESS || POWER_Flags()->f_BatteryLow)
+	POWER_SupplyVoltageCheck();
+	//Отключение питания при:
+	if(POWER_PwrButton() == PRESS  ||      //нажатие на кнопку патания,
+	   POWER_Flags()->f_BatteryLow ||      //низкое напряжение АКБ,
+	   PROTOCOL_I2C_Flags()->f_CmdTurnOff) //пришла команда на отключение.
 	{
+		PROTOCOL_I2C_SystemCtrlReg()->Flags.f_PwrOff = FLAG_SET;
 		POWER_Flags()->f_PowerOff = FLAG_SET;
-		Task_UartSend();//Отладка
-		//Отключение питания MCU.
+		DBG_SendDebugInfo();//Отладка
+		//-------------------
+		//Отключение питания периферии.
 		MOTOR_Disable();
-		FAN_EN_Low();
+		GPS_PowerControl(GPS_POWER_OFF);
 		LAMP_PWM_Low();
 		LIDAR_EN_Low();
-		GPS_EN_Low();
-
+		//Опрос питания БигБорд.
+		count = RTOS_GetTickCount();
+		while(POWER_GetBigBoardPwr())
+		{
+			//Мигающая индикация отключения питания.
+			POWER_PwrButtonLed(Blink(INTERVAL_500_mS));
+			//Длительное нажатие на кнопку.
+			if(POWER_PwrButton() == PRESS)
+			{
+				if((RTOS_GetTickCount() - count) >= 5000) goto POWER_OFF;
+			}
+			else count = RTOS_GetTickCount();
+			//Низкое напряжени АКБ.
+			if(POWER_Flags()->f_BatteryLow) break;
+		}
 		//Определение периода мигающей индикации.
 		if(POWER_Flags()->f_BatteryLow) blinkInterval = INTERVAL_50_mS;
-		else							blinkInterval = INTERVAL_500_mS;
-		//Мигающая индикация отключения в течении 3 сек.
-		count = RTOS_GetTickCount();
-		Blink_ResetCount();
-		PWR_BTN_LED_Low();
-		while((RTOS_GetTickCount() - count) <= 3000)
+		else							blinkInterval = INTERVAL_100_mS;
+		//Мигающая индикация отключения в течении 2 сек.
+		while((RTOS_GetTickCount() - count) <= 2000)
 		{
-			if(Blink(blinkInterval)) PWR_BTN_LED_Low();
-			else					 PWR_BTN_LED_High();
+			POWER_PwrButtonLed(Blink(blinkInterval));
 		}
-		__disable_irq();
+		//-------------------
+		POWER_OFF:
 		PWR_BTN_LED_Low();
+		FAN_EN_Low();
+		//BB_PWR_BTN_Low();
+		__disable_irq();
 		MCU_POWER_OFF();
-		DELAY_milliS(1000);
+		while(1);
+		//-------------------
 	}
 }
 //*******************************************************************************************
@@ -178,7 +190,7 @@ void BuildAndSendTextBuf(uint32_t timeStamp, uint32_t encodTicks, uint32_t angle
 //	DMA1Ch4StartTx(txBuf, 31);
 }
 //************************************************************
-void GPS_SendDebugInfo(void){
+void DBG_SendDebugInfo(void){
 
 	//--------------------------------
 	Txt_Chr('\f');
@@ -309,6 +321,36 @@ void Task_Motor(void){
 //*******************************************************************************************
 //*******************************************************************************************
 //*******************************************************************************************
+void POWER_TurnOnAndSupplyVoltageCheck(void){
+
+	//Ждем отпускания копки.
+	while(POWER_PwrButton() != RELEASE){};
+	//Включение питания платы.
+	MCU_POWER_ON();
+	DELAY_milliS(100); //Задержка для стабилизации напряжения патания.
+	//Напряженеи НИЖЕ минимального (10,8В) напряжения АКБ.
+	if(POWER_GetSupplyVoltage() < BATTERY_VOLTAGE_MIN)
+	{
+		//Зупуск таймера. Это нужно для мигающей индикации
+		SysTick_Init();
+		NVIC_SetPriority(SysTick_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 3, 0));//Системный таймер, прерывание каждую 1мс - самый низкий приоритет прерывания = 3
+		__enable_irq();
+		//Отключение питания.
+		Task_POWER_Check();
+
+//		while(1) //(POWER_SupplyVoltage() <= BATTERY_VOLTAGE_MIN)
+//		{
+//			//Мигающая индикация - Низкий заряд АКБ.
+//			POWER_PwrButtonLedBlink(INTERVAL_50_mS);
+//			//Отключение по нажатию на кнопку.
+//			if(POWER_PwrButton() == PRESS) Task_POWER_Check();
+//		}
+	}
+}
+//*******************************************************************************************
+//*******************************************************************************************
+//*******************************************************************************************
+//*******************************************************************************************
 int main(void){
 
 	//***********************************************
@@ -316,41 +358,33 @@ int main(void){
  	STM32_Clock_Init();
 	GPIO_Init();
 	DELAY_Init();
+
 	//***********************************************
-	//Инициализация АЦП для измерения напряжения АКБ.
-	//Инициализация кнопки питания.
+	//Инициализация АЦП для измерения напряжения АКБ и кнопки питания.
 	POWER_Init();
-	//***********************************************
-//	while(POWER_PwrButton() != RELEASE){};//Ждем отпускания копки.
-	//Включение питания платы.
-	MCU_POWER_ON();
-	//Смотрим что там с напряжением АКБ.
-//	if(POWER_SupplyVoltage() < BATTERY_VOLTAGE_MIN)//Напряженеи НИЖЕ миннимального (10,8В) напряжения АКБ.
-//	{
-//		SysTick_Init();//Это нужно для мигающей индикации
-//		__enable_irq();
-//		while(1)//(POWER_SupplyVoltage() <= 10800)
-//		{
-//			//Мигающая индикация - Низкий заряд АКБ.
-//			if(Blink(INTERVAL_100_mS)) PWR_BTN_LED_High();
-//			else 					   PWR_BTN_LED_Low();
-//			//Отключение по нажатию на кнопку.
-//			if(!(MCU_PWR_BTN_GPIO->IDR & (1<<MCU_PWR_BTN_PIN))) Task_POWER_Check();
-//		}
-//	}
+	//Включение питания платы. Смотрим что там с напряжением АКБ.
+	POWER_TurnOnAndSupplyVoltageCheck();
 	//Включение питания периферии.
 	PWR_BTN_LED_High();
 	FAN_EN_High();
 	LIDAR_EN_High();
 //	LAMP_PWM_High();
-	DELAY_milliS(500); //500mS - Задержка для стабилизации напряжения патания.
+	DELAY_milliS(100); //Задержка для стабилизации напряжения патания.
+
 	//***********************************************
-	TEMPERATURE_SENSE_Init(); //Инициализация датчиков температуры.
-	OPT_SENS_Init();		  //Инициализация оптических дадчитков наличия крышки объетива и наличия АКБ.
-	ENCODER_Init();			  //Инициализация энкодера.
-	MOTOR_Init();			  //Инициализация драйвера мотора.
-	PROTOCOL_I2C_Init();	  //Инициализация протокола обмена.
-	GPS_Init();				  //Инициализация обмена с модулем GPS.
+	//Инициализация:
+	TEMPERATURE_SENSE_Init(); //датчиков температуры.
+	OPT_SENS_Init();		  //оптических дадчитков наличия крышки объетива и наличия АКБ.
+	ENCODER_Init();			  //энкодера.
+	PROTOCOL_I2C_Init();	  //протокола обмена.
+	GPS_Init();				  //обмена с модулем GPS.
+	MOTOR_Init();			  //драйвера мотора.
+
+	//Значения для отладки.
+	//MOTOR_SetAccelerationTime(100);
+	MOTOR_SetVelocity(100);
+	MOTOR_SetPosition(180);
+
 	//***********************************************
 	//Иницияализация ШИМ для управления LAMP. Используется вывод PB1(TIM3_CH4).
 	TIM3_InitForPWM();
@@ -358,10 +392,11 @@ int main(void){
 	//***********************************************
 	//Ини-я диспетчера.
 	RTOS_Init();
-	RTOS_SetTask(Task_TEMPERATURE_Read, 0, 500);//запуск задачи через 0мс и с периодом повторения 500мс
-//	RTOS_SetTask(Task_POWER_Check,      0, 100);   //запуск задачи через 0мс и с периодом повторения 100мс
-	RTOS_SetTask(GPS_SendDebugInfo,		0, 500);
-//	RTOS_SetTask(Task_Motor,            2000, 10*1000);
+	RTOS_SetTask(Task_TEMPERATURE_Read, 0, 500);//Измерение температуры каждую 1сек.
+	RTOS_SetTask(Task_POWER_Check,      0, 100);//Опрос кнопки питания и проверка напряжения питания каждые 100мс.
+	RTOS_SetTask(DBG_SendDebugInfo,		0, 500);//Опрос модуля GSM каждые 500мс.
+//	RTOS_SetTask(Task_Motor,            2000, 2*1000);
+
 	//***********************************************
 	SysTick_Init();
 	//Приоритеты прерываний.
@@ -382,7 +417,7 @@ int main(void){
 	while(1)
 	{
 		RTOS_DispatchLoop();
-		//__WFI();//Sleep
+		//__WFI(); //Sleep
 	}
 	//**************************************************************
 }
@@ -394,11 +429,13 @@ void SysTick_IT_Handler(void){
 	msDelay_Loop();
 	Blink_Loop();
 	GPIO_CheckLoop();
-	RTOS_TimerServiceLoop();
-	if(POWER_Flags()->f_PowerOff)return;//Если нажали кнопку питания значит выключаемся и ничего не опрашиваем..
+	RTOS_TimerServiceLoop();//Служба таймеров.
+	//Если нажали кнопку питания значит выключаемся и ничего не опрашиваем..
+	if(POWER_Flags()->f_PowerOff)return;
 	//--------------------------
-	PROTOCOL_I2C_IncTimeoutAndResetI2c(); //Таймаут преинициализации I2C в случае зависания.
-	OPT_SENS_CheckLoop(); 	   			  //Опрос состояния сенсоров наличия крышки объектива и наличия АКБ.
+	PROTOCOL_I2C_IncTimeoutAndResetI2c();//Таймаут преинициализации I2C в случае зависания.
+	OPT_SENS_CheckLoop(); 	   			 //Опрос состояния сенсоров наличия крышки объектива и наличия АКБ.
+
 	//MOTOR_TimerITHandler2();//Отладка!!!
 	//**************************************************************
 	//Работа с энкодером. Для отладки данные предаются по USART.
@@ -417,7 +454,7 @@ void SysTick_IT_Handler(void){
 		if(encoderTicks < 0) encoderTicks = -encoderTicks;
 		//LED_ACT_Low();
 		//Расчет значений для расчета скрости.
-		Angle = ENCODER_DEGREE_QUANT * encoderTicks;  //расчет угла поворота вала энкодера.
+		Angle = ENCODER_GetAngleQuant() * encoderTicks;  //расчет угла поворота вала энкодера.
 		if(OldAngle > Angle) OldAngle -= 360.0;		  //Это нужно для корректного расчета скорости при переходе от 359 к 0 градусов.
 		DeltaAngle = Angle - OldAngle;         		  //приращение угла
 

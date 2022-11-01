@@ -37,6 +37,8 @@ UxHandlers_t* Uart1Handler(void);
 
 //********************************************************
 void USART_DMA_Init(USART_TypeDef *usart, uint32_t baudRate);
+void USART_DMA_Disable(USART_TypeDef *usart);
+void USART_DMA_Enable(USART_TypeDef *usart);
 
 //Работа с DMA.
 void DMAxChxInitForTx(DMA_Channel_TypeDef *dma, uint32_t *perifAddr);
