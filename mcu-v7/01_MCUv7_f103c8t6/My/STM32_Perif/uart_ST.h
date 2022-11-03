@@ -10,9 +10,9 @@
 //*******************************************************************************************
 //*******************************************************************************************
 
-//#include "stm32f10x.h"
 #include "main.h"
 
+//*******************************************************************************************
 //*******************************************************************************************
 #define APB1CLK 	36000000UL
 #define APB2CLK 	72000000UL
@@ -28,14 +28,12 @@ typedef struct{
 }UxHandlers_t;
 //*******************************************************************************************
 //*******************************************************************************************
-//Аппатартный уровень.
-void 		  Uart1Init  (uint16_t usartBrr);
-void 		  Uart1ManagingRx(uint8_t rxState);
-void 		  Uart1StarTx(uint8_t *TxBuf, uint8_t size);
-void          Uart1DmaStarTx(uint8_t *TxBuf, uint32_t size);
-UxHandlers_t* Uart1Handler(void);
+void USARTx_Init(USART_TypeDef *usart, uint32_t baudRate); //инициализация usart`a
+void USARTx_SendBuff(USART_TypeDef *usart, uint8_t *buff, uint32_t size);
+void USARTx_IT_Handler(USART_TypeDef *usart);			   //Обработчик прерываний USART.
 
 //********************************************************
+//Работа с DMA.
 void USART_DMA_Init(USART_TypeDef *usart, uint32_t baudRate);
 void USART_DMA_Disable(USART_TypeDef *usart);
 void USART_DMA_Enable(USART_TypeDef *usart);

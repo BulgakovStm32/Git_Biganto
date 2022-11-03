@@ -14,10 +14,10 @@
 
 //*******************************************************************************************
 //*******************************************************************************************
-#define ADC_DC_IN_DIV_CH		8		//Канал АЦП
+#define DC_IN_DIV_ADC_CH		8		//Канал АЦП
 #define DIVIDER_HIGH_RESISTER	10000	//Сопротивление верхнего резистора делителя, в Омах
 #define DIVIDER_LOW_RESISTER	1000	//Сопротивление нижнего резистора делителя, в Омах
-#define DIVISION_FACTOR		    ((DIVIDER_HIGH_RESISTER/DIVIDER_LOW_RESISTER) + 1)//коэффициент деления елителя
+#define DIVISION_FACTOR		    (((DIVIDER_HIGH_RESISTER + DIVIDER_LOW_RESISTER/2)/ DIVIDER_LOW_RESISTER) + 1)//коэффициент деления елителя
 
 #define BATTERY_VOLTAGE_MIN		10800	//Минимально напряжение питания, в мВ
 #define BATTERY_VOLTAGE_WARNING	12000	//Напряжение при котором нужно обратить внимание на заряд АКБ, в мВ.

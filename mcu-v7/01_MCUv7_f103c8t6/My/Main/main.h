@@ -11,7 +11,7 @@
 
 #include "math.h"
 
-//-------------------------
+//-----------------------------------
 //STM32 Perif Drivers.
 #include "stm32f103xb.h"
 #include "sys_ST.h"
@@ -24,11 +24,11 @@
 #include "adc_ST.h"
 #include "uart_ST.h"
 #include "rtc_ST.h"
-//-------------------------
+//-----------------------------------
 //Планировщик
 //#include "Scheduler.h"
 #include "rtos.h"
-//-------------------------
+//-----------------------------------
 #include "cmd.h"
 #include "Protocol_I2C.h"
 #include "Encoder.h"
@@ -37,13 +37,14 @@
 #include "Power.h"
 #include "Gps.h"
 #include "MCU.h"
-//-------------------------
+//-----------------------------------
 #include "Delay.h"
 #include "Blink.h"
 #include "DS18B20.h"
 #include "Buttons.h"
 #include "Crc.h"
 #include "MyString.h"
+#include "RingBuff.h"
 
 //#include "LcdGraphic.h"
 //#include "Lcd_i2c_1602.h"

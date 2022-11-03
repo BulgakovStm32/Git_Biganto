@@ -26,7 +26,17 @@ void POWER_Init(void){
 //**********************************************************
 uint32_t POWER_GetSupplyVoltage(void){
 
-	return ADC_GetMeas(ADC_DC_IN_DIV_CH) * DIVISION_FACTOR;
+//	uint32_t avrMeas = 0;
+//	//-------------------
+//	for(uint32_t i = 0; i < 8; i++)
+//	{
+//		avrMeas += ADC_GetMeas(ADC_DC_IN_DIV_CH);
+//		DELAY_microS(500);
+//	}
+//	avrMeas = avrMeas/8;
+//	return (avrMeas * DIVISION_FACTOR);
+
+	return ADC_GetMeas(DC_IN_DIV_ADC_CH) * DIVISION_FACTOR;
 }
 //**********************************************************
 void POWER_SupplyVoltageCheck(void){

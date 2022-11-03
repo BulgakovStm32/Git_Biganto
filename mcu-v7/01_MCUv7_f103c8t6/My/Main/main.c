@@ -20,26 +20,9 @@
 Button_t PwrButton;
 
 void DBG_SendDebugInfo(void);
+
 //*******************************************************************************************
 //*******************************************************************************************
-//Пример использования.
-//if(Led_Blink(RTOS_GetTickCount(), 500, 10)) PWR_BTN_LED_Low();
-//else 										  PWR_BTN_LED_High();
-
-uint32_t Led_Blink(uint32_t millis, uint32_t period, uint32_t switch_on_time){
-
-	static uint32_t millisOld = 0;
-	static uint32_t flag      = 0;
-	//-------------------
-	if((millis - millisOld) >= (flag ? (period - switch_on_time) : switch_on_time))
-	{
-		millisOld = millis;
-		flag = !flag;
-	}
-	return flag;
-}
-//************************************************************
-
 //*******************************************************************************************
 //*******************************************************************************************
 void Task_TEMPERATURE_Read(void){
@@ -84,7 +67,7 @@ void Task_POWER_Check(void){
 		{
 			//Мигающая индикация отключения питания.
 			POWER_PwrButtonLed(Blink(INTERVAL_500_mS));
-			//Длительное нажатие на кнопку.
+			//Длительное нажатие на кнопку (5 сек).
 			if(POWER_PwrButton() == PRESS)
 			{
 				if((RTOS_GetTickCount() - count) >= 5000) goto POWER_OFF;
@@ -116,80 +99,6 @@ void Task_POWER_Check(void){
 //*******************************************************************************************
 //*******************************************************************************************
 //*******************************************************************************************
-//Работа с энкодером AMM3617.Энкодер выдает 17-тибитный код Грея.
-#define _RPM					60
-#define QUANT_FOR_100mS     	((_RPM * (1000/100) * 1000) / 360.0)
-#define QUANT_FOR_10mS      	((_RPM * (1000/10)  * 1000) / 360.0)
-#define QUANT_FOR_64mS      	((_RPM * (1000/64)  * 1000) / 360.0)
-//********************************************************
-volatile uint32_t sysTick      	= 0;
-volatile int32_t  encoderTicks 	= 0;
-volatile static uint32_t encoderOffset = 0;
-
-volatile float Angle      = 0.0;
-volatile float OldAngle	  = 0.0;
-volatile float DeltaAngle = 0.0;
-volatile float RPM	      = 0.0;
-
-uint8_t txBuf[64] = {0,};
-//*******************************************************************************************
-void BinToDecWithoutDot(uint32_t var, uint8_t* buf){
-
-	*(buf+0) = (uint8_t)(var / 100000) + '0';
-	var %= 100000;
-
-	*(buf+1) = (uint8_t)(var / 10000) + '0';
-	var %= 10000;
-
-	*(buf+2) = (uint8_t)(var / 1000) + '0';
-	var %= 1000;
-
-	//*(buf+3) = ',';
-
-	*(buf+3) = (uint8_t)(var / 100) + '0';
-	var %= 100;
-
-	*(buf+4) = (uint8_t)(var / 10) + '0';
-	*(buf+5) = (uint8_t)(var % 10) + '0';
-}
-//************************************************************
-void BinToDecWithDot(uint32_t var, uint8_t* buf){
-
-	*(buf+0) = (uint8_t)(var / 100000) + '0';
-	var %= 100000;
-
-	*(buf+1) = (uint8_t)(var / 10000) + '0';
-	var %= 10000;
-
-	*(buf+2) = (uint8_t)(var / 1000) + '0';
-	var %= 1000;
-
-	*(buf+3) = ',';
-
-	*(buf+4) = (uint8_t)(var / 100) + '0';
-	var %= 100;
-
-	*(buf+5) = (uint8_t)(var / 10) + '0';
-	*(buf+6) = (uint8_t)(var % 10) + '0';
-}
-//************************************************************
-void BuildAndSendTextBuf(uint32_t timeStamp, uint32_t encodTicks, uint32_t angle, uint32_t speed){
-
-	BinToDecWithDot(timeStamp, txBuf);
-	txBuf[7] = '\t';
-
-	BinToDecWithoutDot(encodTicks, txBuf+8);
-	txBuf[14] = '\t';
-
-	BinToDecWithDot(angle, txBuf+15);
-	txBuf[22] = '\t';
-
-	BinToDecWithDot(speed, txBuf+23);
-	txBuf[30] = '\r';
-
-//	DMA1Ch4StartTx(txBuf, 31);
-}
-//************************************************************
 void DBG_SendDebugInfo(void){
 
 	//--------------------------------
@@ -214,19 +123,19 @@ void DBG_SendDebugInfo(void){
 
 	//Вывод данных энкодера.
 	Txt_Print("ENCOD_OFFSET  : ");
-	Txt_BinToDec(encoderOffset, 6);
+	Txt_BinToDec(ENCODER_DBG_Data()->offset, 6);
 	Txt_Chr('\n');
 
 	Txt_Print("ENCOD_CODE  : ");
-	Txt_BinToDec(encoderTicks, 6);
+	Txt_BinToDec(ENCODER_DBG_Data()->code, 6);
 	Txt_Chr('\n');
 
 	Txt_Print("ENCOD_ANGLE: ");
-	Txt_BinToDec((uint32_t)(Angle * 1000), 6);
+	Txt_BinToDec((uint32_t)(ENCODER_DBG_Data()->angle * 1000), 6);
 	Txt_Chr('\n');
 
 	Txt_Print("ENCOD_RPM   : ");
-	Txt_BinToDec((uint32_t)(RPM), 6);
+	Txt_BinToDec((uint32_t)(ENCODER_DBG_Data()->RPM), 6);
 	Txt_Chr('\n');
 
 	//Вывод температуры.
@@ -271,6 +180,19 @@ void DBG_SendDebugInfo(void){
 	//USART2_TX -> DMA1_Channel7
 	DMAxChxStartTx(DMA1_Channel7, Txt_Buf()->buf, Txt_Buf()->bufIndex);
 	Txt_Buf()->bufIndex = 0;
+}
+//************************************************************
+void DBG_UsartCmdCheck(void){
+
+	static uint8_t rxBuff[RING_BUFF_SIZE] = {0};
+	//-------------------
+	if(RING_BUFF_Flags()->f_receivedCR)
+	{
+		RING_BUFF_Flags()->f_receivedCR = FLAG_CLEAR;
+		RING_BUFF_CopyRxBuff(rxBuff);
+
+		LED_ACT_Toggel();
+	}
 }
 //*******************************************************************************************
 //*******************************************************************************************
@@ -324,7 +246,7 @@ void Task_Motor(void){
 void POWER_TurnOnAndSupplyVoltageCheck(void){
 
 	//Ждем отпускания копки.
-	while(POWER_PwrButton() != RELEASE){};
+	//while(POWER_PwrButton() != RELEASE){};
 	//Включение питания платы.
 	MCU_POWER_ON();
 	DELAY_milliS(100); //Задержка для стабилизации напряжения патания.
@@ -334,17 +256,10 @@ void POWER_TurnOnAndSupplyVoltageCheck(void){
 		//Зупуск таймера. Это нужно для мигающей индикации
 		SysTick_Init();
 		NVIC_SetPriority(SysTick_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 3, 0));//Системный таймер, прерывание каждую 1мс - самый низкий приоритет прерывания = 3
+		NVIC_EnableIRQ(SysTick_IRQn);
 		__enable_irq();
 		//Отключение питания.
 		Task_POWER_Check();
-
-//		while(1) //(POWER_SupplyVoltage() <= BATTERY_VOLTAGE_MIN)
-//		{
-//			//Мигающая индикация - Низкий заряд АКБ.
-//			POWER_PwrButtonLedBlink(INTERVAL_50_mS);
-//			//Отключение по нажатию на кнопку.
-//			if(POWER_PwrButton() == PRESS) Task_POWER_Check();
-//		}
 	}
 }
 //*******************************************************************************************
@@ -382,9 +297,8 @@ int main(void){
 
 	//Значения для отладки.
 	//MOTOR_SetAccelerationTime(100);
-	MOTOR_SetVelocity(100);
-	MOTOR_SetPosition(180);
-
+	//MOTOR_SetVelocity(100);
+	//MOTOR_SetPosition(180);
 	//***********************************************
 	//Иницияализация ШИМ для управления LAMP. Используется вывод PB1(TIM3_CH4).
 	TIM3_InitForPWM();
@@ -392,9 +306,10 @@ int main(void){
 	//***********************************************
 	//Ини-я диспетчера.
 	RTOS_Init();
+	RTOS_SetTask(Task_POWER_Check,   1000, 100);//Опрос кнопки питания и проверка напряжения питания каждые 100мс.
 	RTOS_SetTask(Task_TEMPERATURE_Read, 0, 500);//Измерение температуры каждую 1сек.
-	RTOS_SetTask(Task_POWER_Check,      0, 100);//Опрос кнопки питания и проверка напряжения питания каждые 100мс.
-	RTOS_SetTask(DBG_SendDebugInfo,		0, 500);//Опрос модуля GSM каждые 500мс.
+	RTOS_SetTask(DBG_SendDebugInfo,		0, 500);//Передача отладочной информации.
+	RTOS_SetTask(DBG_UsartCmdCheck,		0, 5);
 //	RTOS_SetTask(Task_Motor,            2000, 2*1000);
 
 	//***********************************************
@@ -423,6 +338,8 @@ int main(void){
 }
 //*******************************************************************************************
 //*******************************************************************************************
+//*******************************************************************************************
+//*******************************************************************************************
 //Прерывание каждую милисекунду.
 void SysTick_IT_Handler(void){
 
@@ -433,43 +350,16 @@ void SysTick_IT_Handler(void){
 	//Если нажали кнопку питания значит выключаемся и ничего не опрашиваем..
 	if(POWER_Flags()->f_PowerOff)return;
 	//--------------------------
-	PROTOCOL_I2C_IncTimeoutAndResetI2c();//Таймаут преинициализации I2C в случае зависания.
+	PROTOCOL_I2C_IncTimeoutAndResetI2c();//Таймаут переинициализации I2C в случае зависания.
 	OPT_SENS_CheckLoop(); 	   			 //Опрос состояния сенсоров наличия крышки объектива и наличия АКБ.
-
-	//MOTOR_TimerITHandler2();//Отладка!!!
 	//**************************************************************
-	//Работа с энкодером. Для отладки данные предаются по USART.
-	static uint32_t mSecCount = 0;
-	//Формирование таймстемпов
-	sysTick++;
-	if(sysTick > 999999) sysTick = 0;
-	//--------------------------
-	if(++mSecCount >= 100)
-	{
-		mSecCount = 0;
-		//__disable_irq();
-		//LED_ACT_High();
-		//Чтение заначения энкодера. ~9,5 мкС
-		encoderTicks  = ENCODER_GetCode() - encoderOffset;
-		if(encoderTicks < 0) encoderTicks = -encoderTicks;
-		//LED_ACT_Low();
-		//Расчет значений для расчета скрости.
-		Angle = ENCODER_GetAngleQuant() * encoderTicks;  //расчет угла поворота вала энкодера.
-		if(OldAngle > Angle) OldAngle -= 360.0;		  //Это нужно для корректного расчета скорости при переходе от 359 к 0 градусов.
-		DeltaAngle = Angle - OldAngle;         		  //приращение угла
-
-		//Расчет скорости вращения.
-		RPM = DeltaAngle * QUANT_FOR_100mS;
-		OldAngle = Angle;
-		//Передаем данные по USART на кудахтер.
-		BuildAndSendTextBuf(sysTick,
-							encoderTicks,
-							(uint32_t)(Angle * 1000),
-							(uint32_t)(RPM));
-		//__enable_irq();
-	}
+	//Отладка!!!
+	//MOTOR_TimerITHandler2();		  //Работа с мотром.
+	ENCODER_DBG_CalcAngleAndSpeed();//Работа с энкодером. Для отладки данные предаются по USART.
 	//**************************************************************
 }
+//*******************************************************************************************
+//*******************************************************************************************
 //*******************************************************************************************
 //*******************************************************************************************
 

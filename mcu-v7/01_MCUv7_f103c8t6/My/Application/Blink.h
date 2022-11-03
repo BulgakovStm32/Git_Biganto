@@ -26,6 +26,7 @@ typedef enum{
 void 	 Blink_ResetCount(void);
 void     Blink_Loop(void);
 uint32_t Blink(BlinkIntervalEnum_t interval);
+uint32_t Blink_WithVariablePeriod(uint32_t millis, uint32_t period, uint32_t switch_on_time);
 
 //*******************************************************************************************
 //*******************************************************************************************

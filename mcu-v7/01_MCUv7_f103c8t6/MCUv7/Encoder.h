@@ -39,8 +39,26 @@ uint16_t ENCODER_GetConfig(void);
 float 	 ENCODER_GetAngleQuant(void);
 int32_t  ENCODER_GetCode(void);
 
-
 void 	 ENCODER_BuildPack(uint8_t *buf);
+
+//*******************************************************************************************
+//*******************************************************************************************
+#define _RPM					60
+#define QUANT_FOR_100mS     	((_RPM * (1000/100) * 1000) / 360.0)
+#define QUANT_FOR_10mS      	((_RPM * (1000/10)  * 1000) / 360.0)
+#define QUANT_FOR_64mS      	((_RPM * (1000/64)  * 1000) / 360.0)
+//********************************************************
+typedef struct{
+	int32_t  code;
+	uint32_t offset;
+	float 	 angle;
+	float 	 RPM;
+}EncoderDebug_t;
+//********************************************************
+//Ф-ии для отладки работы энкодера
+EncoderDebug_t* ENCODER_DBG_Data(void);
+void 			ENCODER_DBG_CalcAngleAndSpeed(void);
+
 //*******************************************************************************************
 //*******************************************************************************************
 #endif /* MCUV7_ENCODER_H_ */

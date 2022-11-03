@@ -17,7 +17,7 @@ static uint8_t  encoderType       = 0; //тип кода (Грей или бин
 static uint32_t encoderShift	  = 0;
 static uint32_t encoderMask		  = 0;
 static uint32_t encoderState 	  = 0;
-static float encoderAngleQuant	  = 0;//количество градусов в одном наге энкодера.
+static float encoderAngleQuant	  = 0;//количество градусов в одном шаге энкодера.
 
 //*******************************************************************************************
 //*******************************************************************************************
@@ -33,7 +33,6 @@ static uint32_t _encoder_GrayToBin(uint32_t grayCode){
 	return grayCode;
 }
 //**********************************************************
-
 
 //*******************************************************************************************
 //*******************************************************************************************
@@ -58,8 +57,8 @@ void ENCODER_SetConfig(uint16_t config){
 	encoderResolution =  config & 0x00FF;
 	encoderType       = (config >> 8) & 0x00FF;
 
-	if(encoderResolution == 0) 							encoderResolution = ENCODER_RESOLUTION_BIT_MIN;
-	if(encoderResolution >= ENCODER_RESOLUTION_BIT_MAX) encoderResolution = ENCODER_RESOLUTION_BIT_MAX;
+	if(encoderResolution == 0) 						   encoderResolution = ENCODER_RESOLUTION_BIT_MIN;
+	if(encoderResolution > ENCODER_RESOLUTION_BIT_MAX) encoderResolution = ENCODER_RESOLUTION_BIT_MAX;
 	encoderMask       = ((1 << encoderResolution) - 1);
 	encoderAngleQuant = (360.0 / (1 << encoderResolution));
 
@@ -118,8 +117,120 @@ void ENCODER_BuildPackConfig(uint8_t *buf){
 }
 //**********************************************************
 
-//**********************************************************
+//*******************************************************************************************
+//*******************************************************************************************
+//*******************************************************************************************
+//*******************************************************************************************
+//Ф-ии для отладки работы энкодера
+static EncoderDebug_t encoderDebug = {.code   = 0,
+									  .offset = 0,
+									  .angle  = 0.0,
+									  .RPM 	  = 0.0};
+static float 	oldAngle   = 0.0;
+static float 	deltaAngle = 0.0;
+static uint32_t sysTick    = 0;
+static uint8_t  txBuf[64]  = {0};
+//*******************************************************************************************
+//*******************************************************************************************
+static void BinToDecWithoutDot(uint32_t var, uint8_t* buf){
 
+	*(buf+0) = (uint8_t)(var / 100000) + '0';
+	var %= 100000;
+
+	*(buf+1) = (uint8_t)(var / 10000) + '0';
+	var %= 10000;
+
+	*(buf+2) = (uint8_t)(var / 1000) + '0';
+	var %= 1000;
+
+	//*(buf+3) = ',';
+
+	*(buf+3) = (uint8_t)(var / 100) + '0';
+	var %= 100;
+
+	*(buf+4) = (uint8_t)(var / 10) + '0';
+	*(buf+5) = (uint8_t)(var % 10) + '0';
+}
+//************************************************************
+static void BinToDecWithDot(uint32_t var, uint8_t* buf){
+
+	*(buf+0) = (uint8_t)(var / 100000) + '0';
+	var %= 100000;
+
+	*(buf+1) = (uint8_t)(var / 10000) + '0';
+	var %= 10000;
+
+	*(buf+2) = (uint8_t)(var / 1000) + '0';
+	var %= 1000;
+
+	*(buf+3) = ',';
+
+	*(buf+4) = (uint8_t)(var / 100) + '0';
+	var %= 100;
+
+	*(buf+5) = (uint8_t)(var / 10) + '0';
+	*(buf+6) = (uint8_t)(var % 10) + '0';
+}
+//************************************************************
+static void BuildAndSendTextBuf(uint32_t timeStamp, uint32_t encodTicks, uint32_t angle, uint32_t speed){
+
+	BinToDecWithDot(timeStamp, txBuf);
+	txBuf[7] = '\t';
+
+	BinToDecWithoutDot(encodTicks, txBuf+8);
+	txBuf[14] = '\t';
+
+	BinToDecWithDot(angle, txBuf+15);
+	txBuf[22] = '\t';
+
+	BinToDecWithDot(speed, txBuf+23);
+	txBuf[30] = '\r';
+
+//	DMA1Ch4StartTx(txBuf, 31);
+
+	//USART1_TX -> DMA1_Channel4
+	//USART2_TX -> DMA1_Channel7
+//	DMAxChxStartTx(DMA1_Channel7, txBuf, 31);
+}
+//************************************************************
+EncoderDebug_t* ENCODER_DBG_Data(void){
+
+	return &encoderDebug;
+}
+//************************************************************
+//Работа с энкодером. Для отладки данные предаются по USART.
+void ENCODER_DBG_CalcAngleAndSpeed(void){
+
+	static uint32_t mSecCount = 0;
+	//--------------------------
+	sysTick++;
+	if(sysTick > 999999) sysTick = 0;
+	//--------------------------
+	if(++mSecCount >= 100)//расчет скорости производится каждые 100мс.
+	{
+		mSecCount = 0;
+		//__disable_irq();
+		//LED_ACT_High();
+		//Чтение заначения энкодера. ~9,5 мкС
+		encoderDebug.code  = ENCODER_GetCode() - encoderDebug.offset;
+		if(encoderDebug.code < 0) encoderDebug.code = -encoderDebug.code;
+		//LED_ACT_Low();
+		//Расчет значений для расчета скрости.
+		encoderDebug.angle = ENCODER_GetAngleQuant() * encoderDebug.code;//расчет угла поворота вала энкодера.
+		if(oldAngle > encoderDebug.angle) oldAngle -= 360.0;	         //Это нужно для корректного расчета скорости при переходе от 359 к 0 градусов.
+		deltaAngle = encoderDebug.angle - oldAngle;         		     //приращение угла
+
+		//Расчет скорости вращения.
+		encoderDebug.RPM = deltaAngle * QUANT_FOR_100mS;
+		oldAngle = encoderDebug.angle;
+		//Передаем данные по USART на кудахтер.
+		BuildAndSendTextBuf(sysTick,
+							encoderDebug.code,
+							(uint32_t)(encoderDebug.angle * 1000),
+							(uint32_t)(encoderDebug.RPM));
+		//__enable_irq();
+	}
+}
 //*******************************************************************************************
 //*******************************************************************************************
 //*******************************************************************************************

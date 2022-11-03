@@ -13,7 +13,7 @@
 //*******************************************************************************************
 
 static I2C_IT_t 		   I2cWire;
-static ProtocolFlag_t 	   protocolFlags;
+static volatile ProtocolFlag_t 	   protocolFlags;
 static MCU_SystemCtrlReg_t systemCtrlReg;
 //*******************************************************************************************
 //*******************************************************************************************
@@ -32,7 +32,7 @@ static void _protocol_RequestParsing(void){
 	if(crcCalc != crcReq) return;//если CRC не совпадает то выходим.
 	//--------------------------
 	I2cWire.timeOut 	= 0; 		//Сброс таймаута.
-	protocolFlags.f_Led	= FLAG_SET;	//Индикация приема пакета.
+//	protocolFlags.f_Led	= FLAG_SET;	//Индикация приема пакета.
 	cmd = request->CmdCode;			//
 	//DELAY_microS(50);//Отладка.
 	//Разбор пришедшего запроса
@@ -218,7 +218,7 @@ void PROTOCOL_I2C_IncTimeoutAndResetI2c(void){
 		{
 			ledCount = 0;
 			protocolFlags.f_Led == FLAG_CLEAR;
-			LED_ACT_Toggel();
+//			LED_ACT_Toggel();
 		}
 	}
 }
