@@ -41,30 +41,27 @@ typedef enum {
 #define MOTOR_ONE_FULL_STEP_DEGREE	1.8f
 //Кол-во полных шагов ШД на оборот.
 #define MOTOR_FULL_STEPS_PER_TURN	(uint32_t)(360.0 / MOTOR_ONE_FULL_STEP_DEGREE)
-
 #define MOTOR_QUANT_TIME_mS			1
 //-----------------------------------
 //Управление моментом.
-#define	MOTOR_TORQUE_ON		1
-#define	MOTOR_TORQUE_OFF	0
-
+#define	MOTOR_TORQUE_ON				1
+#define	MOTOR_TORQUE_OFF			0
 //-----------------------------------
 //Заводские настройки.
-#define MOTOR_DEFAULT_MICROSTEP			STEP_32	//количество микрошагов
-#define MOTOR_DEFAULT_REDUCER_RATE		1		//передаточное чисо редуктора
-#define MOTOR_DEFAULT_ACCEL_TIME_mS		1500	//время ускорения/замедлениия в мС
-#define MOTOR_DEFAULT_RPM				1		//скорость в RPM
-
+#define MOTOR_DEFAULT_MICROSTEP		STEP_32	//количество микрошагов
+#define MOTOR_DEFAULT_REDUCER_RATE	6		//передаточное чисо редуктора
+#define MOTOR_DEFAULT_ACCEL_TIME_mS	2000	//время ускорения/замедлениия в мС
+#define MOTOR_DEFAULT_RPM			60//10		//скорость в RPM
 //-----------------------------------
 //максимальные и минимальные значения параметров.
-#define MOTOR_REDUCER_RATE_MAX			60   	//передаточное чисо редуктора
-#define MOTOR_REDUCER_RATE_MIN			1
+#define MOTOR_REDUCER_RATE_MAX		120//60   	//передаточное число редуктора
+#define MOTOR_REDUCER_RATE_MIN		1
 
-#define MOTOR_ACCEL_TIME_mS_MAX			10000	//время ускорения/замедлениия в мС
-#define MOTOR_ACCEL_TIME_mS_MIN			100
+#define MOTOR_ACCEL_TIME_mS_MAX		5000	//время ускорения/замедлениия в мС
+#define MOTOR_ACCEL_TIME_mS_MIN		50
 
-#define MOTOR_RPM_MAX					60		//скорость в RPM
-#define MOTOR_RPM_MIN					1
+#define MOTOR_RPM_MAX				60		//скорость в RPM
+#define MOTOR_RPM_MIN				1
 //*******************************************************************************************
 //*******************************************************************************************
 void MOTOR_Init(void);
@@ -73,19 +70,19 @@ void MOTOR_SetMicrostepMode(MotorStepMode_t steps);
 void MOTOR_SetReducerRate(uint32_t rate);
 void MOTOR_SetAccelerationTime(uint32_t accelTime_mS);
 void MOTOR_SetVelocity(uint32_t maxVel);
-void MOTOR_SetPosition(int32_t angle);
+void MOTOR_SetTargetPosition(int32_t angle);
 
 MotorStepMode_t MOTOR_GetMicrostepMode(void);
 uint32_t 		MOTOR_GetReducerRate(void);
 uint32_t 		MOTOR_GetAccelerationTime(void);
 uint32_t 		MOTOR_GetVelocity(void);
-int32_t  		MOTOR_GetPosition(void);
+int32_t  		MOTOR_GetTargetPosition(void);
+uint32_t 		MOTOR_GetMotorPosition(void);
+
 
 void MOTOR_TorqueControl(uint32_t state);
 void MOTOR_DriverReset(void);
 void MOTOR_EmergencyStopRotation(void);
-
-
 
 void MOTOR_Disable(void);
 void MOTOR_Enable(void);

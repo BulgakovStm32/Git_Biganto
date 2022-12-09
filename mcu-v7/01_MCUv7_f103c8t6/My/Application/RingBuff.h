@@ -21,7 +21,8 @@
 //Флаги питания
 typedef struct{
 	uint32_t 	f_receivedCR   	 : 1; //принят символ '\r'
-	uint32_t	dummy	     	 : 31;
+	uint32_t 	f_receivedLF   	 : 1; //принят символ '\n'
+	uint32_t	dummy	     	 : 30;
 }RingBuffFlag_t;
 //**********************************
 

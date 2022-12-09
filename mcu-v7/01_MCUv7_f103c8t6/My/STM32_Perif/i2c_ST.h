@@ -17,7 +17,7 @@
 //Константы для настройки скорости работы I2C
 #define APB1_CLK			36000000U 				//Частота шины APB1 в Гц
 #define I2C_FREQ	    	(APB1_CLK / 1000000U)	//Peripheral clock frequency (MHz)
-
+//--------------------------
 //Sm mode or SMBus:
 //TPCLK1 = 27,7777 ns
 //CCR    = 1000nS/ (2 * TPCLK1)
@@ -31,9 +31,9 @@
 //TRISE  = (300nS/TPCLK1)
 #define I2C_FM_CCR			30 //(2500U / (3 * TPCLK1))
 #define I2C_FM_TRISE		12 //(300U  / TPCLK1)
-
+//--------------------------
 //Таймаут ожидания сброса флага
-#define I2C_WAIT_TIMEOUT	1000U
+#define I2C_WAIT_TIMEOUT	5000//1000U
 //--------------------------
 #define I2C_MODE_READ  		1
 #define I2C_MODE_WRITE 		0
@@ -83,43 +83,8 @@ void I2C_Slave_Init(I2C_TypeDef *i2c, uint32_t remap, uint32_t slaveAddr, uint32
 
 #define I2C_IT_RX_BUF_SIZE_DEFAULT	32
 #define I2C_IT_TX_BUF_SIZE_DEFAULT	32
-
-////Константы из STM32F10x_StdPeriph_Driver, файл stm32f10x_i2c.h V3.5.0 11-March-2011
-////I2C Slave Events (Events grouped in order of communication)
-///* --EV1  (all the events below are variants of EV1) */
-///* 1) Case of One Single Address managed by the slave */
-//#define  I2C_EVENT_SLAVE_RECEIVER_ADDRESS_MATCHED          ((uint32_t)0x00020002) /* BUSY and ADDR flags */
-//#define  I2C_EVENT_SLAVE_TRANSMITTER_ADDRESS_MATCHED       ((uint32_t)0x00060082) /* TRA, BUSY, TXE and ADDR flags */
-//
-///* 2) Case of Dual address managed by the slave */
-//#define  I2C_EVENT_SLAVE_RECEIVER_SECONDADDRESS_MATCHED    ((uint32_t)0x00820000)  /* DUALF and BUSY flags */
-//#define  I2C_EVENT_SLAVE_TRANSMITTER_SECONDADDRESS_MATCHED ((uint32_t)0x00860080)  /* DUALF, TRA, BUSY and TXE flags */
-//
-///* 3) Case of General Call enabled for the slave */
-//#define  I2C_EVENT_SLAVE_GENERALCALLADDRESS_MATCHED        ((uint32_t)0x00120000)  /* GENCALL and BUSY flags */
-//
-///* Slave RECEIVER mode --------------------------*/
-///* --EV2 */
-////#define  I2C_EVENT_SLAVE_BYTE_RECEIVED                     ((uint32_t)0x00020040)  /* BUSY and RXNE flags */
-///* --EV4  */
-//#define  I2C_EVENT_SLAVE_STOP_DETECTED                     ((uint32_t)0x00000010)  /* STOPF flag */
-//
-///* Slave TRANSMITTER mode -----------------------*/
-///* --EV3 */
-//#define  I2C_EVENT_SLAVE_BYTE_TRANSMITTED                  ((uint32_t)0x00060084)  /* TRA, BUSY, TXE and BTF flags */
-//#define  I2C_EVENT_SLAVE_BYTE_TRANSMITTING                 ((uint32_t)0x00060080)  /* TRA, BUSY and TXE flags */
-///* --EV3_2 */
-//#define  I2C_EVENT_SLAVE_ACK_FAILURE                       ((uint32_t)0x00000400)  /* AF flag */
-//
-///* I2C FLAG mask */
-//#define I2C_EVENT_FLAG_Mask	((uint32_t)0x00FFFFFF)
-//
-////Мои константы.
-//#define  I2C_EVENT_SLAVE_BYTE_RECEIVED		((uint32_t)0x00020044)  /* BUSY, RXNE and BTF flags */
-//#define  I2C_EVENT_SLAVE_BYTE_RECEIVING		((uint32_t)0x00020040)  /* BUSY and RXNE flags */
-//#define  I2C_EVENT_SLAVE_UNCKNOW			((uint32_t)0x000600c2)  /* ADDR, TXE, RXNE, BUSY and TRA flags */
-//#define  I2C_EVENT_SLAVE_UNCKNOW_1			((uint32_t)0x00060004)  /* TRA, BUSY and BTF flags */
-//--------------------------
+//****************************************************
+//Состояния
 typedef enum{
   I2C_IT_STATE_RESET = 0,   	/*!< Peripheral is not yet Initialized         */
   I2C_IT_STATE_READY,  			/*!< Peripheral Initialized and ready for use  */

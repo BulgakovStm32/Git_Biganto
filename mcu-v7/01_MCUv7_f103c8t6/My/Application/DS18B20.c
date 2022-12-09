@@ -334,14 +334,14 @@ void TEMPERATURE_SENSE2_ReadTemperature(void){
 	_ds18b20_ReadTemperature(&TemperatureSensor_2);
 }
 //**********************************************************
-DS18B20_t* TEMPERATURE_SENSE_GetSens(uint32_t numSensor){
+DS18B20_t* TEMPERATURE_SENSE_GetSens(uint8_t numSensor){
 
 		 if(numSensor == 1) return &TemperatureSensor_1;
 	else if(numSensor == 2) return &TemperatureSensor_2;
 	else return 0;
 }
 //**********************************************************
-void TEMPERATURE_SENSE_BuildPack(uint32_t numSensor, uint8_t *buf){
+void TEMPERATURE_SENSE_BuildPack(uint8_t numSensor, uint8_t *buf){
 
 	DS18B20_t *sensor;
 	//---------------------

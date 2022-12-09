@@ -17,7 +17,7 @@ static uint8_t  encoderType       = 0; //тип кода (Грей или бин
 static uint32_t encoderShift	  = 0;
 static uint32_t encoderMask		  = 0;
 static uint32_t encoderState 	  = 0;
-static float encoderAngleQuant	  = 0;//количество градусов в одном шаге энкодера.
+static uint32_t encoderAngleQuantX10e6 = 0;//количество градусов в одном шаге энкодера *1000000.
 
 //*******************************************************************************************
 //*******************************************************************************************
@@ -59,12 +59,14 @@ void ENCODER_SetConfig(uint16_t config){
 
 	if(encoderResolution == 0) 						   encoderResolution = ENCODER_RESOLUTION_BIT_MIN;
 	if(encoderResolution > ENCODER_RESOLUTION_BIT_MAX) encoderResolution = ENCODER_RESOLUTION_BIT_MAX;
-	encoderMask       = ((1 << encoderResolution) - 1);
-	encoderAngleQuant = (360.0 / (1 << encoderResolution));
+
+	uint32_t res = (1 << encoderResolution);
+	encoderMask  = (res - 1);
+	encoderAngleQuantX10e6 = (360 * 1000000 + res/2) / res;
 
 	//Опеределение на сколько нужно сдвинуть вычитанные из энкодера данные.
 	//ENCODER_SPI_READ_BIT - столько всего бит вычитывается из энкодера.
-	//resolution - разрешение энкодера
+	//resolution 		   - разрешение энкодера
 	//Минус 1 т.к. первый вычитанный бит незначащий.
 	encoderShift = ENCODER_SPI_READ_BIT_NUM - encoderResolution - 1;
 }
@@ -77,9 +79,9 @@ uint16_t ENCODER_GetConfig(void){
 	return (uint16_t)( (uint8_t)(encoderType << 8) | (uint8_t)encoderResolution);
 }
 //**********************************************************
-float ENCODER_GetAngleQuant(void){
+uint32_t ENCODER_GetAngleQuant(void){
 
-	return encoderAngleQuant;
+	return encoderAngleQuantX10e6;
 }
 //**********************************************************
 //Получение значение поворота энкодера.
@@ -96,6 +98,12 @@ int32_t ENCODER_GetCode(void){
 	if(encoderType == ENCODER_TYPE_BIN)  return encoderVal;
 	if(encoderType == ENCODER_TYPE_GRAY) return _encoder_GrayToBin(encoderVal);
 	return -1;//ошибка типа
+}
+//**********************************************************
+//получение угла энкодера.
+uint32_t ENCODER_GetAngle(void){
+
+	return (ENCODER_GetCode() * encoderAngleQuantX10e6 + 500) / 1000;
 }
 //**********************************************************
 void ENCODER_BuildPackCode(uint8_t *buf){

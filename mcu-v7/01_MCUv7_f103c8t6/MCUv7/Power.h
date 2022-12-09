@@ -17,7 +17,7 @@
 #define DC_IN_DIV_ADC_CH		8		//Канал АЦП
 #define DIVIDER_HIGH_RESISTER	10000	//Сопротивление верхнего резистора делителя, в Омах
 #define DIVIDER_LOW_RESISTER	1000	//Сопротивление нижнего резистора делителя, в Омах
-#define DIVISION_FACTOR		    (((DIVIDER_HIGH_RESISTER + DIVIDER_LOW_RESISTER/2)/ DIVIDER_LOW_RESISTER) + 1)//коэффициент деления елителя
+#define DIVISION_FACTOR		    (((DIVIDER_HIGH_RESISTER + DIVIDER_LOW_RESISTER/2) / DIVIDER_LOW_RESISTER) + 1)//коэффициент деления делителя
 
 #define BATTERY_VOLTAGE_MIN		10800	//Минимально напряжение питания, в мВ
 #define BATTERY_VOLTAGE_WARNING	12000	//Напряжение при котором нужно обратить внимание на заряд АКБ, в мВ.
@@ -50,12 +50,14 @@ typedef struct{
 //*******************************************************************************************
 void	 	     POWER_Init(void);
 uint32_t 	     POWER_GetSupplyVoltage(void);
-void 			 POWER_SupplyVoltageCheck(void);
+uint32_t 		 POWER_GetSupplyVoltageSMA(void);
+void 			 POWER_CheckSupplyVoltage(void);
 PowerFlag_t*     POWER_Flags(void);
 PwrButtonState_t POWER_PwrButton(void);
 void 			 POWER_PwrButtonLed(uint32_t sate);
 uint32_t 		 POWER_GetBigBoardPwr(void);
 
+void POWER_SetPWMwidthForLamp(uint32_t width);
 //*******************************************************************************************
 //*******************************************************************************************
 #endif /* MCUV7_POWER_H_ */

@@ -19,14 +19,14 @@
 //*******************************************************************************************
 //*******************************************************************************************
 uint16_t CRC16_FastCalculate(uint8_t *pBlock, uint32_t len);
-uint8_t  CRC8_Calculate(uint8_t *pBlock, uint32_t len);
-uint8_t  CRC8_FastCalculate(uint8_t *pBlock, uint32_t len);
+uint8_t  CRC8_Calculate(uint8_t *pBlock, uint8_t len);
+uint8_t  CRC8_FastCalculate(uint8_t *pBlock, uint8_t len);
 uint8_t  CRC8_ForEachByte(uint8_t byte, uint8_t oldCrc);
 
-uint8_t  CRC8_OneWire(uint8_t *pBlock, uint32_t len);
-uint8_t  CRC8_TableOneWire(uint8_t *pBlock, uint32_t len);
+uint8_t  CRC8_OneWire(uint8_t *pBlock, uint8_t len);
+uint8_t  CRC8_TableOneWire(uint8_t *pBlock, uint8_t len);
 
-uint8_t  CRC_Calculate(uint8_t *pBlock, uint32_t len);
+//uint8_t  CRC_Calculate(uint8_t *pBlock, uint32_t len);
 
 //*******************************************************************************************
 //*******************************************************************************************

@@ -13,8 +13,9 @@ SDA        |PB7          |Serial data line
  */
 //*************************************************
 //#include "stm32f10x.h"
-#include "main.h"
 //#include "i2c.h"
+
+#include "main.h"
 
 #include "fonts.h"
 #include "stdlib.h"

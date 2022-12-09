@@ -67,7 +67,7 @@ uint16_t CRC16_FastCalculate(uint8_t *pBlock, uint32_t len){
 //*******************************************************************************************
 //*******************************************************************************************
 //Расчет CRC8.
-uint8_t CRC8_Calculate(uint8_t *pBlock, uint32_t len){
+uint8_t CRC8_Calculate(uint8_t *pBlock, uint8_t len){
 
 	uint8_t crc = 0xff;
 	//-------------------------
@@ -126,7 +126,7 @@ const uint8_t Crc8Table[256] = {
     0x3B, 0x0A, 0x59, 0x68, 0xFF, 0xCE, 0x9D, 0xAC
 };
 //**********************************************************
-uint8_t CRC8_FastCalculate(uint8_t *pBlock, uint32_t len){
+uint8_t CRC8_FastCalculate(uint8_t *pBlock, uint8_t len){
 
     uint8_t crc = 0xFF;
     //-------------------------
@@ -145,7 +145,7 @@ uint8_t CRC8_ForEachByte(uint8_t byte, uint8_t oldCrc){
 //**********************************************************
 // Обновляет значение контольной суммы crc применением всех бит байта b.
 // Возвращает обновлённое значение контрольной суммы
-uint8_t CRC8_OneWire(uint8_t *pBlock, uint32_t len){
+uint8_t CRC8_OneWire(uint8_t *pBlock, uint8_t len){
 
 	uint8_t data;
 	uint8_t tmp;
@@ -190,7 +190,7 @@ const uint8_t Crc8Table_OneWire[256] = {
 
 // Calculates DOW CRC value for a stream of bytes
 // unsigned char CHECKSUM (unsigned char *BYTE, int size_of_BYTE)
-uint8_t CRC8_TableOneWire(uint8_t *pBlock, uint32_t len){
+uint8_t CRC8_TableOneWire(uint8_t *pBlock, uint8_t len){
 
 	uint8_t crc;
 	//-------------------------
@@ -200,12 +200,6 @@ uint8_t CRC8_TableOneWire(uint8_t *pBlock, uint32_t len){
 		crc = Crc8Table_OneWire[crc ^ pBlock[i]]; // look up array for appropriate calc
 	}
 	return crc;
-}
-//*******************************************************************************************
-//*******************************************************************************************
-uint8_t CRC_Calculate(uint8_t *pBlock, uint32_t len){
-
-	return CRC8_FastCalculate(pBlock, len);
 }
 //*******************************************************************************************
 //*******************************************************************************************

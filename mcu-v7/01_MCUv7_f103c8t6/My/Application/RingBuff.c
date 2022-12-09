@@ -15,7 +15,7 @@ static volatile uint8_t	 ringRxBuf[RING_BUFF_SIZE] = {0};
 static volatile uint32_t ringRxBufTail = 0;
 static volatile uint32_t ringRxBufHead = 0;
 static volatile uint32_t ringRxCount   = 0;
-static volatile RingBuffFlag_t ringRxFlags;
+static RingBuffFlag_t 	 ringRxFlags;
 
 //*******************************************************************************************
 //*******************************************************************************************
@@ -85,7 +85,7 @@ void RING_BUFF_PutByteToRxBuff(uint8_t byte){
 
     if(ringRxCount < RING_BUFF_SIZE)//если в буфере еще есть место
 	{
-    	//Проверка имволов окончания строки и т.п.
+    	//Проверка символов окончания строки и т.п.
     	if(byte == '\r') ringRxFlags.f_receivedCR = FLAG_SET;
 
     	ringRxBuf[ringRxBufTail] = byte;//кладем символ в буфер

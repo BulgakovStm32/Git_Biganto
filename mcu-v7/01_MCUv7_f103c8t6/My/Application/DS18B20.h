@@ -84,8 +84,8 @@ typedef struct{
 void TEMPERATURE_SENSE_Init(void);
 void TEMPERATURE_SENSE1_ReadTemperature(void);
 void TEMPERATURE_SENSE2_ReadTemperature(void);
-DS18B20_t* TEMPERATURE_SENSE_GetSens(uint32_t numSensor);
-void TEMPERATURE_SENSE_BuildPack(uint32_t numSensor, uint8_t *buf);
+DS18B20_t* TEMPERATURE_SENSE_GetSens(uint8_t numSensor);
+void TEMPERATURE_SENSE_BuildPack(uint8_t numSensor, uint8_t *buf);
 
 //*******************************************************************************************
 //*******************************************************************************************

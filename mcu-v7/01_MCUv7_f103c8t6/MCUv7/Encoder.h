@@ -36,11 +36,11 @@ typedef enum {
 void 	 ENCODER_Init(void);
 void     ENCODER_SetConfig(uint16_t config);
 uint16_t ENCODER_GetConfig(void);
-float 	 ENCODER_GetAngleQuant(void);
+uint32_t ENCODER_GetAngleQuant(void);
 int32_t  ENCODER_GetCode(void);
+uint32_t ENCODER_GetAngle(void);
 
 void 	 ENCODER_BuildPack(uint8_t *buf);
-
 //*******************************************************************************************
 //*******************************************************************************************
 #define _RPM					60

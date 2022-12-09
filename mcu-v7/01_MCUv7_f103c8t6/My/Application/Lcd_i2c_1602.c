@@ -8,9 +8,8 @@
 //************************************************************************************************************
 static void lcd_send_tetrad(uint8_t byte, uint8_t type){
   
-	uint8_t temp = 0;
+	uint8_t temp = byte & 0xF0;
 	//-------------------------
-	temp = byte & 0xF0;
 	//управление ножкой RS.
 	if(type) temp |=  LCD_RS;
 	else	 temp &= ~LCD_RS;
@@ -32,21 +31,27 @@ static void lcd_send(uint8_t byte, uint8_t type){
 	lcd_send_tetrad(byte, type);       //Передаем старшую тетраду.
 	lcd_send_tetrad((byte << 4), type);//Передаем младшую тетраду.
 }
+//***************************************************************
+static void lcd_Delay(uint32_t delay){
+
+//	msDelay(delay);
+	DELAY_milliS(delay);
+}
 //************************************************************************************************************
 //************************************************************************************************************
 //ПП инициалации LCD.
 void lcd_init(void){
 
-	msDelay(250);
+	lcd_Delay(250);
 	//we start in 8bit mode, try to set 4 bit mode
 	lcd_send(0x03, LCD_CMD);
-	msDelay(5);
+	lcd_Delay(5);
 	//second try
 	lcd_send(0x03, LCD_CMD);
-	msDelay(5);
+	lcd_Delay(5);
 	//third go!
 	lcd_send(0x03, LCD_CMD);
-	msDelay(1);
+	lcd_Delay(1);
 	//finally, set to 4-bit interface
 	lcd_send(0x02, LCD_CMD);
 	// set # lines, font size, etc.
@@ -60,7 +65,7 @@ void lcd_init(void){
 void lcd_clear(void){
   
 	 lcd_send(LCD_CLEARDISPLAY, LCD_CMD);
-	 msDelay(4);
+	 lcd_Delay(4);
 }
 //***************************************************************
 //Ф-я установки курсора.

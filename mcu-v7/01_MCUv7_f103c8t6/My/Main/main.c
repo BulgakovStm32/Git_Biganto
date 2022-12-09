@@ -25,12 +25,32 @@ void DBG_SendDebugInfo(void);
 //*******************************************************************************************
 //*******************************************************************************************
 //*******************************************************************************************
+static void SettingInterruptPriorities(void){
+
+	//Приоритеты прерываний.
+	//Таймер управления мотором - самый высокий приоритет = 1.
+	NVIC_SetPriority(TIM1_UP_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 1, 0));
+	//Прерывания I2C для работы протакола - приоритет = 2
+	NVIC_SetPriority(I2C2_EV_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 2, 0));
+	NVIC_SetPriority(I2C2_ER_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 2, 0));
+	//Системный таймер, прерывание каждую 1мс - самый низкий приоритет = 3
+	NVIC_SetPriority(SysTick_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 3, 0));
+	//Разрешаем прерывания.
+	NVIC_EnableIRQ(TIM1_UP_IRQn);
+	NVIC_EnableIRQ(I2C2_EV_IRQn);
+	NVIC_EnableIRQ(I2C2_ER_IRQn);
+	NVIC_EnableIRQ(SysTick_IRQn);
+}
+//*******************************************************************************************
+//*******************************************************************************************
+//*******************************************************************************************
+//*******************************************************************************************
 void Task_TEMPERATURE_Read(void){
 
 	static uint32_t flag = 0;
 	//-------------------
 	//Во время вращения запрещено чтение температуры.
-//	if(MOTOR_GetSpeedRampState() != STOP) return;
+	//if(MOTOR_GetSpeedRampState() != STOP) return;
 
 	//Чтение темперартуры с датчика 2 смещенео на 500мс
 	//относительно чтение темперартуры датчика 1.
@@ -46,7 +66,7 @@ void Task_POWER_Check(void){
 	BlinkIntervalEnum_t blinkInterval;
 	//-------------------
 	//Проверка напряжения АКБ.
-	POWER_SupplyVoltageCheck();
+	POWER_CheckSupplyVoltage();
 	//Отключение питания при:
 	if(POWER_PwrButton() == PRESS  ||      //нажатие на кнопку патания,
 	   POWER_Flags()->f_BatteryLow ||      //низкое напряжение АКБ,
@@ -101,6 +121,12 @@ void Task_POWER_Check(void){
 //*******************************************************************************************
 void DBG_SendDebugInfo(void){
 
+	static uint32_t flag = 0;
+
+	if(!flag) POWER_SetPWMwidthForLamp(50);
+	else      POWER_SetPWMwidthForLamp(0);
+	flag ^= 1;
+
 	//--------------------------------
 	Txt_Chr('\f');
 	Txt_Print("******************\n");
@@ -121,22 +147,42 @@ void DBG_SendDebugInfo(void){
 	Txt_BinToDec(POWER_GetSupplyVoltage(), 5);
 	Txt_Print(" mV\n");
 
-	//Вывод данных энкодера.
-	Txt_Print("ENCOD_OFFSET  : ");
-	Txt_BinToDec(ENCODER_DBG_Data()->offset, 6);
+	//Кол-во шагов сделанные мотором
+	Txt_Print("MotorPosition : ");
+	Txt_BinToDec(MOTOR_GetMotorPosition(), 10);
 	Txt_Chr('\n');
 
-	Txt_Print("ENCOD_CODE  : ");
-	Txt_BinToDec(ENCODER_DBG_Data()->code, 6);
+	//код энкодера
+	Txt_Print("EncoderCode : ");
+	Txt_BinToDec(ENCODER_GetCode(), 6);
 	Txt_Chr('\n');
 
-	Txt_Print("ENCOD_ANGLE: ");
-	Txt_BinToDec((uint32_t)(ENCODER_DBG_Data()->angle * 1000), 6);
+	//угол энкодера
+	Txt_Print("EncoderAngle : ");
+	Txt_BinToDec(ENCODER_GetAngle(), 7);
 	Txt_Chr('\n');
 
-	Txt_Print("ENCOD_RPM   : ");
-	Txt_BinToDec((uint32_t)(ENCODER_DBG_Data()->RPM), 6);
+	Txt_Print("EncoderQuant : ");
+	Txt_BinToDec(ENCODER_GetAngleQuant(), 7);
 	Txt_Chr('\n');
+
+
+//	//Вывод данных энкодера.
+//	Txt_Print("ENCOD_OFFSET  : ");
+//	Txt_BinToDec(ENCODER_DBG_Data()->offset, 6);
+//	Txt_Chr('\n');
+//
+//	Txt_Print("ENCOD_CODE  : ");
+//	Txt_BinToDec(ENCODER_DBG_Data()->code, 6);
+//	Txt_Chr('\n');
+//
+//	Txt_Print("ENCOD_ANGLE: ");
+//	Txt_BinToDec((uint32_t)(ENCODER_DBG_Data()->angle * 1000), 6);
+//	Txt_Chr('\n');
+//
+//	Txt_Print("ENCOD_RPM   : ");
+//	Txt_BinToDec((uint32_t)(ENCODER_DBG_Data()->RPM), 6);
+//	Txt_Chr('\n');
 
 	//Вывод температуры.
 	Txt_Print("TSens1= ");
@@ -185,30 +231,73 @@ void DBG_SendDebugInfo(void){
 void DBG_UsartCmdCheck(void){
 
 	static uint8_t rxBuff[RING_BUFF_SIZE] = {0};
+	uint32_t charIndex = 0;
+	uint32_t param     = 0;
 	//-------------------
-	if(RING_BUFF_Flags()->f_receivedCR)
+	if(RING_BUFF_Flags()->f_receivedCR)//Принята строка
 	{
-		RING_BUFF_Flags()->f_receivedCR = FLAG_CLEAR;
-		RING_BUFF_CopyRxBuff(rxBuff);
+		RING_BUFF_Flags()->f_receivedCR = FLAG_CLEAR;//Сброс признака принятой строки.
+		RING_BUFF_CopyRxBuff(rxBuff);				 //кипируем принятую строку из колльцевого буфера.
+		//-------------------
+		//Команда управления моментом удержания ШД.
+		charIndex = PARS_EqualWitchRefStr("mcu torque ", (char*)rxBuff);
+		if(charIndex)
+		{
+			param = PARS_EqualWitchRefStr("on", (char*)&rxBuff[charIndex]);
+			if(param) MOTOR_TorqueControl(MOTOR_TORQUE_ON);
 
-		LED_ACT_Toggel();
+			param = PARS_EqualWitchRefStr("off", (char*)&rxBuff[charIndex]);
+			if(param) MOTOR_TorqueControl(MOTOR_TORQUE_OFF);
+
+			//LED_ACT_Toggel();
+			return;
+		}
+		//-------------------
+		//команда вращения на заданный угол
+		charIndex = PARS_EqualWitchRefStr("mcu rotate ", (char*)rxBuff);
+		if(charIndex)
+		{
+			//Cледующий символ может быть или знаком "-" или числом от 0 до 9
+			char ch = (char)rxBuff[charIndex];
+			if((ch < '0' || ch > '9') && ch != '-') return;
+
+			param = PARS_StrToI32((char*)&rxBuff[charIndex]);//параметр команды
+			if(MOTOR_GetSpeedRampState() == STOP)
+			{
+				MOTOR_SetTargetPosition((int32_t)param);
+				RTOS_SetTask(MOTOR_StartRotate, 0, 0);//запуск вращения.
+			}
+
+			//LED_ACT_Toggel();
+			return;
+		}
+		//-------------------
+		//Команда ....
+
+		//-------------------
+		//Команда ....
+
+		//-------------------
+		//Команда ....
+
+		//-------------------
 	}
 }
 //*******************************************************************************************
 //*******************************************************************************************
 //*******************************************************************************************
 //*******************************************************************************************
-void Task_MotorStop(void){
+void DBG_MotorStop(void){
 
 	MOTOR_SetSpeedRampState(DECEL);
 }
 //************************************************************
-void Task_Motor(void){
+void DBG_Motor(void){
 
 	uint32_t RPM            = MOTOR_GetVelocity();        //38;    //Скорость оборотов в минуту
 	uint32_t accelTime_mSec = MOTOR_GetAccelerationTime();//500;   //время ускорения в милисекундах
 	uint32_t reducerRate    = MOTOR_GetReducerRate();     //6;     //передаточное число редуктора = 6.
-	uint32_t angle		    = MOTOR_GetPosition();        //360*2; //Угол на который нужно переместить вал камеры в градусах.
+	uint32_t angle		    = MOTOR_GetTargetPosition();  //360*2; //Угол на который нужно переместить вал камеры в градусах.
 
 	//uint32_t accel_RPMM  = 4000; //Ускорение оборотов в минуту за минуту
 	//Вариант расчета значений когда ускорение задается как время ускорения в мС.
@@ -247,10 +336,12 @@ void POWER_TurnOnAndSupplyVoltageCheck(void){
 
 	//Ждем отпускания копки.
 	//while(POWER_PwrButton() != RELEASE){};
+
 	//Включение питания платы.
 	MCU_POWER_ON();
 	DELAY_milliS(100); //Задержка для стабилизации напряжения патания.
-	//Напряженеи НИЖЕ минимального (10,8В) напряжения АКБ.
+
+	//Напряжение НИЖЕ минимального (10,8В) напряжения АКБ.
 	if(POWER_GetSupplyVoltage() < BATTERY_VOLTAGE_MIN)
 	{
 		//Зупуск таймера. Это нужно для мигающей индикации
@@ -258,8 +349,7 @@ void POWER_TurnOnAndSupplyVoltageCheck(void){
 		NVIC_SetPriority(SysTick_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 3, 0));//Системный таймер, прерывание каждую 1мс - самый низкий приоритет прерывания = 3
 		NVIC_EnableIRQ(SysTick_IRQn);
 		__enable_irq();
-		//Отключение питания.
-		Task_POWER_Check();
+		Task_POWER_Check();//Отключение питания.
 	}
 }
 //*******************************************************************************************
@@ -268,14 +358,13 @@ void POWER_TurnOnAndSupplyVoltageCheck(void){
 //*******************************************************************************************
 int main(void){
 
-	//***********************************************
+	//--------------------------
 	//Инициализация периферии STM32.
  	STM32_Clock_Init();
 	GPIO_Init();
 	DELAY_Init();
-
-	//***********************************************
-	//Инициализация АЦП для измерения напряжения АКБ и кнопки питания.
+	//--------------------------
+	//Инициализация кнопки питания и АЦП для измерения напряжения АКБ.
 	POWER_Init();
 	//Включение питания платы. Смотрим что там с напряжением АКБ.
 	POWER_TurnOnAndSupplyVoltageCheck();
@@ -285,8 +374,7 @@ int main(void){
 	LIDAR_EN_High();
 //	LAMP_PWM_High();
 	DELAY_milliS(100); //Задержка для стабилизации напряжения патания.
-
-	//***********************************************
+	//--------------------------
 	//Инициализация:
 	TEMPERATURE_SENSE_Init(); //датчиков температуры.
 	OPT_SENS_Init();		  //оптических дадчитков наличия крышки объетива и наличия АКБ.
@@ -294,40 +382,23 @@ int main(void){
 	PROTOCOL_I2C_Init();	  //протокола обмена.
 	GPS_Init();				  //обмена с модулем GPS.
 	MOTOR_Init();			  //драйвера мотора.
-
-	//Значения для отладки.
-	//MOTOR_SetAccelerationTime(100);
-	//MOTOR_SetVelocity(100);
-	//MOTOR_SetPosition(180);
-	//***********************************************
+	//--------------------------
 	//Иницияализация ШИМ для управления LAMP. Используется вывод PB1(TIM3_CH4).
-	TIM3_InitForPWM();
+	//TIM3_InitForPWM();
 
-	//***********************************************
+	//--------------------------
 	//Ини-я диспетчера.
 	RTOS_Init();
 	RTOS_SetTask(Task_POWER_Check,   1000, 100);//Опрос кнопки питания и проверка напряжения питания каждые 100мс.
 	RTOS_SetTask(Task_TEMPERATURE_Read, 0, 500);//Измерение температуры каждую 1сек.
-	RTOS_SetTask(DBG_SendDebugInfo,		0, 500);//Передача отладочной информации.
-	RTOS_SetTask(DBG_UsartCmdCheck,		0, 5);
-//	RTOS_SetTask(Task_Motor,            2000, 2*1000);
 
-	//***********************************************
+	RTOS_SetTask(DBG_SendDebugInfo,		0, 500);//Передача отладочной информации.
+	RTOS_SetTask(DBG_UsartCmdCheck,		0,  50);//Парсинг команд каждые 50 мс
+//	RTOS_SetTask(DBG_Motor,             2000, 2*1000);
+	//--------------------------
 	SysTick_Init();
-	//Приоритеты прерываний.
-	//Таймер управления мотором - самый высокий приоритет = 1.
-	NVIC_SetPriority(TIM1_UP_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 1, 0));
-	//Прерывания I2C для работы протакола - приоритет = 2
-	NVIC_SetPriority(I2C2_EV_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 2, 0));
-	NVIC_SetPriority(I2C2_ER_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 2, 0));
-	//Системный таймер, прерывание каждую 1мс - самый низкий приоритет = 3
-	NVIC_SetPriority(SysTick_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 3, 0));
-	//Разрешаем прерывания.
-	NVIC_EnableIRQ(TIM1_UP_IRQn);
-	NVIC_EnableIRQ(I2C2_EV_IRQn);
-	NVIC_EnableIRQ(I2C2_ER_IRQn);
-	NVIC_EnableIRQ(SysTick_IRQn);
-	__enable_irq();
+	SettingInterruptPriorities();//Приоритеты прерываний
+	__enable_irq();				 //Глобальное разрешение прерываний
 	//**************************************************************
 	while(1)
 	{
@@ -343,20 +414,19 @@ int main(void){
 //Прерывание каждую милисекунду.
 void SysTick_IT_Handler(void){
 
-	msDelay_Loop();
 	Blink_Loop();
 	GPIO_CheckLoop();
 	RTOS_TimerServiceLoop();//Служба таймеров.
-	//Если нажали кнопку питания значит выключаемся и ничего не опрашиваем..
+	//Если нажали кнопку питания значит выключаемся и ничего не опрашиваем.
 	if(POWER_Flags()->f_PowerOff)return;
 	//--------------------------
 	PROTOCOL_I2C_IncTimeoutAndResetI2c();//Таймаут переинициализации I2C в случае зависания.
 	OPT_SENS_CheckLoop(); 	   			 //Опрос состояния сенсоров наличия крышки объектива и наличия АКБ.
-	//**************************************************************
+	//--------------------------
 	//Отладка!!!
 	//MOTOR_TimerITHandler2();		  //Работа с мотром.
 	ENCODER_DBG_CalcAngleAndSpeed();//Работа с энкодером. Для отладки данные предаются по USART.
-	//**************************************************************
+	//--------------------------
 }
 //*******************************************************************************************
 //*******************************************************************************************

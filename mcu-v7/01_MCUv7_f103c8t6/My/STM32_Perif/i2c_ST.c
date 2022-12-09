@@ -406,9 +406,7 @@ uint8_t* I2C_IT_GetpRxBuf(I2C_IT_t *i2cIt){
 //*******************************************************************************************
 static void I2C_IT_ReadByteToBuffer(I2C_IT_t *i2cIt){
 
-	//static uint8_t crc  = 0xff;
-	//	   uint8_t data = 0;
-	//---------------------
+	//Выставляем признак занятости I2C
 	i2cIt->ITState = I2C_IT_STATE_BUSY_RX;
 	//Если есть что принимать то принимаем.
 	if(i2cIt->rxBufIndex < i2cIt->rxBufSize)
@@ -418,7 +416,8 @@ static void I2C_IT_ReadByteToBuffer(I2C_IT_t *i2cIt){
 		i2cIt->rxBufIndex++;
 		//if(i2cIt->rxBufIndex < I2C_IT_RX_BUF_LEN_MAX) i2cIt->rxBufIndex++;
 		//смотрим сколько байт нужно принять.
-		//второй байт пакета - это размер принимаемого пакета. подробности в описании протокола.
+		//второй байт пакета - это размер принимаемого пакета.
+		//подробности в описании протокола.
 		if(i2cIt->rxBufIndex == 2 &&
 		   i2cIt->pRxBuf[1]	 != 0) i2cIt->rxBufSize = i2cIt->pRxBuf[1] + 2;
 		if(i2cIt->rxBufSize > I2C_IT_RX_BUF_LEN_MAX) i2cIt->rxBufSize = I2C_IT_RX_BUF_LEN_MAX;
@@ -427,37 +426,14 @@ static void I2C_IT_ReadByteToBuffer(I2C_IT_t *i2cIt){
 		{
 			i2cIt->i2c->CR2 &= ~I2C_CR2_ITBUFEN;//Откл. прерывание I2C_IT_BUF.
 			i2cIt->i2cSlaveRxCpltCallback();    //Разбор принятого пакета.
+			i2cIt->rxBufIndex = 0; 				//Сброс счетчика принятых байтов
 		}
-
-
-//		data = (uint8_t)i2cIt->i2c->DR;
-//		//Складываем принятый байт в приемный буфер.
-//		*(i2cIt->pRxBuf + i2cIt->rxBufIndex) = data;
-//		i2cIt->rxBufIndex++;
-//		//if(i2cIt->rxBufIndex < I2C_IT_RX_BUF_LEN_MAX) i2cIt->rxBufIndex++;
-//		//смотрим сколько байт нужно принять.
-//		//второй байт пакета - это размер принимаемого пакета. подробности в описании протокола.
-//		if(i2cIt->rxBufIndex == 2 &&
-//		   i2cIt->pRxBuf[1]	 != 0) i2cIt->rxBufSize = i2cIt->pRxBuf[1] + 2;
-//		if(i2cIt->rxBufSize > I2C_IT_RX_BUF_LEN_MAX) i2cIt->rxBufSize = I2C_IT_RX_BUF_LEN_MAX;
-//		//Считаем CRC при приеме каждого байта.
-//		crc = CRC8_ForEachByte(data, crc);
-//		//приняли нужное кол-во байтов.
-//		if(i2cIt->rxBufIndex >= i2cIt->rxBufSize)
-//		{
-//			i2cIt->i2c->CR2 &= ~I2C_CR2_ITBUFEN;//Откл. прерывание I2C_IT_BUF.
-//
-//			if(crc == *(i2cIt->pRxBuf + i2cIt->rxBufIndex - 1))
-//			{
-//				i2cIt->i2cSlaveRxCpltCallback();    //Разбор принятого пакета.
-//			}
-//			crc = 0xff;
-//		}
 	}
 }
 //**********************************************************
 static void I2C_IT_WriteByteFromBuffer(I2C_IT_t *i2cIt){
 
+	//Выставляем признак занятости I2C
 	i2cIt->ITState = I2C_IT_STATE_BUSY_TX;
 	//Еcли есть что передавать то передаем
 	if(i2cIt->txBufSize > 0)
@@ -468,8 +444,13 @@ static void I2C_IT_WriteByteFromBuffer(I2C_IT_t *i2cIt){
 		i2cIt->txBufSize--;
 		//Инкремент указателя буфера.
 		i2cIt->txBufIndex++;
-		//Вызов обработчика события передачи пакета.
-		if(i2cIt->txBufSize == 0) i2cIt->i2cSlaveTxCpltCallback();
+		//Передали нужное кол-во байтов.
+		if(i2cIt->txBufSize == 0)
+		{
+			i2cIt->i2c->CR2 &= ~I2C_CR2_ITBUFEN;//Откл. прерывание I2C_IT_BUF.
+			i2cIt->i2cSlaveTxCpltCallback();	//Вызов обработчика события передачи пакета.
+			i2cIt->txBufIndex = 0; 				//Сброс счетчика переданных байтов
+		}
 	}
 }
 //*******************************************************************************************
@@ -506,25 +487,40 @@ static void I2C_IT_Slave(I2C_IT_t *i2cIt){
 	{
 		i2c->CR1 &= ~I2C_CR1_STOP;   //и записью в CR1 (из примера от ST)
 		i2c->CR2 &= ~I2C_CR2_ITBUFEN;//Откл. прерывание I2C_IT_BUF.
+
+		I2C_IT_ReadByteToBuffer(i2cIt);//Складываем принятый байт в приемный буфер.
+		(void)i2c->SR1;//рекомендация по сбросу бита BTF из даташита
+		(void)i2c->DR;
+
 		i2cIt->ITState = I2C_IT_STATE_STOP;
 	}
 	/*------------------------------------------------------------------------*/
 	/* I2C in mode Transmitter -----------------------------------------------*/
 	else if(i2c->SR2 & I2C_SR2_TRA)//От Мастера пришла команда на чтение - SLA+Rd
 	{
-		/* TXE set and BTF reset --------------------*/
+		/* TXE set and BTF reset --------------*/
 		if((i2c->SR1 & I2C_SR1_TXE)     &&
 		   (i2c->CR2 & I2C_CR2_ITBUFEN) &&
 		  !(i2c->SR1 & I2C_SR1_BTF) )
 		{
 			I2C_IT_WriteByteFromBuffer(i2cIt);//Передаем очередной байт
 		}
-		/* BTF set ----------------------------------*/
+		/* BTF set ---------------------------*/
 		else if((i2c->SR1 & I2C_SR1_BTF) && (i2c->CR2 & I2C_CR2_ITEVTEN))
 		{
 			I2C_IT_WriteByteFromBuffer(i2cIt);//Передаем очередной байт
+			//рекомендация по сбросу бита BTF из даташита
+			(void)i2c->SR1;
+			(void)i2c->DR;
 		}
-		else{ /* Do nothing */ }
+		//else{ /* Do nothing */ }
+		/* -----------------------------------*/
+		else
+		{
+			//рекомендация по сбросу бита BTF из даташита
+			(void)i2c->SR1;
+			(void)i2c->DR;/* Do nothing */
+		}
 	}
 	/*------------------------------------------------------------------------*/
 	/* I2C in mode Receiver --------------------------------------------------*/
@@ -541,89 +537,21 @@ static void I2C_IT_Slave(I2C_IT_t *i2cIt){
 		else if((i2c->SR1 & I2C_SR1_BTF) && (i2c->CR2 & I2C_CR2_ITEVTEN))
 		{
 			I2C_IT_ReadByteToBuffer(i2cIt);//Складываем принятый байт в приемный буфер.
+			//рекомендация по сбросу бита BTF из даташита
+			(void)i2c->SR1;
+			(void)i2c->DR;
 		}
-		else{ /* Do nothing */ }
+		//else{ /* Do nothing */ }
+		/* -----------------------------------*/
+		else
+		{
+			//рекомендация по сбросу бита BTF из даташита
+			(void)i2c->SR1;
+			(void)i2c->DR;/* Do nothing */
+		}
 	}
 	/*------------------------------------------------------------------------*/
 	/*------------------------------------------------------------------------*/
-
-
-//	uint32_t event;
-//	// Reading last event
-//	event = I2C_IT_GetLastEvent(i2cIt->i2c);
-//	/*------------------------------------------------------------------------*/
-//	/* BUSY and ADDR flags ---------------------------------------------------*/
-//	if(event == I2C_EVENT_SLAVE_RECEIVER_ADDRESS_MATCHED)
-//	{
-//		(void)i2cIt->i2c->SR2;	//сбрасываем I2C_IT_ADDR чтением SR1 и SR2
-//		(void)i2cIt->i2c->SR2;
-//
-//		i2cIt->i2c->CR2  |= I2C_CR2_ITBUFEN;//включаем прерывание I2C_IT_BUF - вначале было отключено
-//		i2cIt->rxBufIndex = 0;			    //Сброс счетчиков байтов RX
-//		i2cIt->txBufIndex = 0;			    //и TX.
-//		i2cIt->ITState 	  = I2C_IT_STATE_ADDR_MATCH;
-//	}
-//	/*------------------------------------------------------------------------*/
-//	/* I2C in mode Receiver --------------------------------------------------*/
-//	/* BUSY and RXNE flags */
-//	if(event == I2C_EVENT_SLAVE_BYTE_RECEIVING)
-//	{
-//		I2C_IT_ReadByteToBuffer(i2cIt);//Складываем принятый байт в приемный буфер.
-//	}
-//	/*-----------------------------------------*/
-//	/* BUSY, RXNE and BTF flags */
-//	if(event == I2C_EVENT_SLAVE_BYTE_RECEIVED)
-//	{
-//		I2C_IT_ReadByteToBuffer(i2cIt);//Складываем принятый байт в приемный буфер.
-//	}
-//	/*-----------------------------------------*/
-//	/* TRA, BUSY, TXE, ADDR and RXNE  flags */
-////	if(event == I2C_EVENT_SLAVE_UNCKNOW)
-////	{
-////		(void)i2cIt->i2c->DR; 			    //Очистка флага RXNE
-////		i2cIt->i2c->CR2  |= I2C_CR2_ITBUFEN;//включаем прерывание I2C_IT_BUF - вначале было отключено
-////		i2cIt->rxBufIndex = 0;			    //Сброс счетчиков байтов RX
-////		i2cIt->txBufIndex = 0;			    //и TX.
-////
-////		I2C_IT_WriteByteFromBuffer(i2cIt);  //Передаем очередной байт
-////		event = I2C_IT_GetLastEvent(i2cIt->i2c);
-////	}
-//	/*------------------------------------------------------------------------*/
-//	/* I2C in mode Transmitter -----------------------------------------------*/
-//	/* TRA, BUSY, TXE and ADDR flags */
-//	if(event == I2C_EVENT_SLAVE_TRANSMITTER_ADDRESS_MATCHED)
-//	{
-//		I2C_IT_WriteByteFromBuffer(i2cIt);  //Передаем очередной байт
-//	}
-//	/*-----------------------------------------*/
-//	/* TRA, BUSY and TXE flags */
-//	if(event == I2C_EVENT_SLAVE_BYTE_TRANSMITTING)
-//	{
-//		I2C_IT_WriteByteFromBuffer(i2cIt);//Передаем очередной байт
-//	}
-//	/*-----------------------------------------*/
-//	/* TRA, BUSY, TXE and BTF flags */
-//	if(event == I2C_EVENT_SLAVE_BYTE_TRANSMITTED)
-//	{
-//		I2C_IT_WriteByteFromBuffer(i2cIt);//Передаем очередной байт
-//	}
-//	/*-----------------------------------------*/
-//	/* TRA, BUSY and BTF flags */
-////	if(event == I2C_EVENT_SLAVE_UNCKNOW_1)
-////	{
-////		I2C_IT_WriteByteFromBuffer(i2cIt);//Передаем очередной байт
-////	}
-//	/*------------------------------------------------------------------------*/
-//	/*------------------------------------------------------------------------*/
-//	/* STOPF flag */
-//	if(event == I2C_EVENT_SLAVE_STOP_DETECTED)
-//	{
-//		i2cIt->i2c->CR1 &= ~I2C_CR1_STOP;   //и записью в CR1 (из примера от ST)
-//		i2cIt->i2c->CR2 &= ~I2C_CR2_ITBUFEN;//Откл. прерывание I2C_IT_BUF.
-//		i2cIt->ITState   = I2C_IT_STATE_STOP;
-//	}
-//	/*------------------------------------------------------------------------*/
-//	/*------------------------------------------------------------------------*/
 }
 //*******************************************************************************************
 //*******************************************************************************************

@@ -6,7 +6,7 @@
 
 //*******************************************************************************************
 //*******************************************************************************************
-static uint8_t   *pVideoBuffer;//указатель на видеобуфер.
+static uint8_t  *pVideoBuffer = 0;//указатель на видеобуфер.
 static SSD1306_t SSD1306;
 //********************************************
 //extern const uint16_t Font7x10[];
@@ -110,6 +110,11 @@ uint8_t SSD1306_Init(I2C_TypeDef *i2c) {
 
 	ssd1306_I2C_WriteCMD(0xAF); //--turn on SSD1306 panel
 	//-------------------------
+	//Привязка видеобуфера.
+	pVideoBuffer = Lcd_pVideoBuffer();
+	//-------------------------
+
+
 	//работа по прерываниям I2C.
 
 //	uint8_t InitBuf[28] = {
@@ -156,8 +161,6 @@ uint8_t SSD1306_Init(I2C_TypeDef *i2c) {
 //	};
 //	//------------
 //	I2C_Int_StartSendData(SSD1306_I2C, SSD1306_I2C_ADDR, InitBuf, 28);
-
-	pVideoBuffer = Lcd_pVideoBuffer();
 
 //	msDelay(1000);
 

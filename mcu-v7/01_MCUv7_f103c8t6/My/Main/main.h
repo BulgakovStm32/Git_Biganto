@@ -45,8 +45,9 @@
 #include "Crc.h"
 #include "MyString.h"
 #include "RingBuff.h"
+#include "StringParser.h"
 
-//#include "LcdGraphic.h"
+#include "LcdGraphic.h"
 //#include "Lcd_i2c_1602.h"
 //#include "Filters.h"
 //#include "AHT10.h"

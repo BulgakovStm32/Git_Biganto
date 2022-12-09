@@ -14,12 +14,12 @@
 
 //*******************************************************************************************
 //*******************************************************************************************
-#define ADC_REF			  3264UL //Опорное напряжение
-#define ADC_RESOLUTION	  4096UL
-#define ADC_QUANT		  ((ADC_REF * ADC_RESOLUTION + ADC_RESOLUTION/2) / ADC_RESOLUTION)
+#define ADC_V_REF		  3265UL 	//Опорное напряжение
+#define ADC_RESOLUTION	  4096UL 	//
+#define ADC_QUANT_uV	  (uint32_t)((ADC_V_REF * 1000 + ADC_RESOLUTION/2) / ADC_RESOLUTION)
 
-#define AdcMeasQuantity		16     //Количество измерений для усреднения
-#define AdcMeasShiftDev		4      //Количество сдвигов для деления
+#define AdcMeasQuantity		16     	//Количество измерений для усреднения
+#define AdcMeasShiftDev		4      	//Количество сдвигов для деления
 //--------------------
 
 
@@ -27,10 +27,10 @@
 //*******************************************************************************************
 //Аппатартный уровень.
 void     ADC_Init(void);
-uint32_t ADC_GetMeas(uint32_t channel);
-uint16_t ADC_GetRegDR(ADC_TypeDef *adc);
+uint32_t ADC_GetMeas_mV(uint32_t adcCh);
 
-uint16_t ADC_GetRegJDRx(ADC_TypeDef *adc, uint8_t ch);
+uint32_t ADC_GetRegDR(ADC_TypeDef *adc);
+uint32_t ADC_GetRegJDRx(ADC_TypeDef *adc, uint32_t ch);
 //*******************************************************************************************
 //*******************************************************************************************
 #endif /*_adc_ST_HH*/

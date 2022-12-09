@@ -22,10 +22,14 @@ static uint32_t stepCount   = 0;  //счетчик шагов ШД.
 static MotorStepMode_t microStepsMode    = 0; //кол-во микрошагов на шаг ШД.
 static uint32_t 	   microStepsPerTurn = 0; //кол-во микрошагов на один оборот ШД.
 
+static uint32_t	torqueState	   = 0; //управление моментом удержания после остановки вращения.
 static uint32_t reducerRate    = 0; //передаточное число редуктора.
 static uint32_t accelTime	   = 0; //время ускорения в милисекундах
 static uint32_t targetVelocity = 0; //cкорость, оборотов в минуту (RPM)
 static int32_t  targetAngle	   = 0; //угол на который нужно переместить вал камеры в градусах.
+
+static uint32_t stepsInOneDegreeX1000 = 0;//кол-во шагов в одном градусе *1000. Умножение на 1000 нужно для увеличения точности расчетов.
+static uint32_t degreeInOneStepX1000  = 0;//кол-во градусов в одном шаге *1000.
 
 //Значения, который пересчитываются каждый раз при изменении количества микрошагов ШД.
 //#define ALPHA 	 (_2PI / SPR)             	  // 2*pi/spr
@@ -34,8 +38,8 @@ static int32_t  targetAngle	   = 0; //угол на который нужно п
 //#define A_x20000 	 (int)(ALPHA*20000)           // ALPHA*20000
 
 static float    ALPHA    = 0.0;
-static long     A_T_x100 = 0;
-static long     A_SQ     = 0;
+static long     A_T_x100 = 0.0;
+static long     A_SQ     = 0.0;
 static uint32_t A_x20000 = 0;
 //*******************************************************************************************
 //*******************************************************************************************
@@ -51,13 +55,13 @@ void MOTOR_Init(void){
 	TIM1_Init(MOTOR_T_FREQ_Hz);
 
 	//Заводские настройки.
-	MOTOR_TorqueControl(MOTOR_TORQUE_OFF);			  //Откл. момент ШД.
-	MOTOR_DriverReset();							  //сброс внутренней логики драйвера мотора DRV8825.
-	MOTOR_SetMicrostepMode(MOTOR_DEFAULT_MICROSTEP);  //Режим микрошаги
-	reducerRate    		= MOTOR_DEFAULT_REDUCER_RATE; //передаточное число редуктора.
-	accelTime      		= MOTOR_DEFAULT_ACCEL_TIME_mS;//время ускорения в милисекундах
-	targetVelocity 		= MOTOR_DEFAULT_RPM;		  //cкорость, оборотов в минуту (RPM)
-	speedRamp.run_state = STOP;						  //машина состояния
+	MOTOR_TorqueControl(MOTOR_TORQUE_OFF);			   //Откл. момента ШД.
+	MOTOR_DriverReset();							   //сброс внутренней логики драйвера мотора DRV8825.
+	MOTOR_SetMicrostepMode(MOTOR_DEFAULT_MICROSTEP);   //Режим микрошаги
+	reducerRate    		=  MOTOR_DEFAULT_REDUCER_RATE; //передаточное число редуктора.
+	accelTime      		=  MOTOR_DEFAULT_ACCEL_TIME_mS;//время ускорения в милисекундах
+	targetVelocity 		=  MOTOR_DEFAULT_RPM;		   //cкорость, оборотов в минуту (RPM)
+	speedRamp.run_state = STOP;						   //машина состояния
 }
 //**********************************************************
 //Задать микрошаг
@@ -148,7 +152,7 @@ void MOTOR_SetVelocity(uint32_t maxVel){
 	targetVelocity = maxVel;
 }
 //**********************************************************
-void MOTOR_SetPosition(int32_t angle){
+void MOTOR_SetTargetPosition(int32_t angle){
 
 	if(speedRamp.run_state != STOP)return;
 	targetAngle = angle;
@@ -174,14 +178,20 @@ uint32_t MOTOR_GetVelocity(void){
 	return targetVelocity;
 }
 //**********************************************************
-int32_t MOTOR_GetPosition(void){
+int32_t MOTOR_GetTargetPosition(void){
 
 	return targetAngle;
+}
+//**********************************************************
+uint32_t MOTOR_GetMotorPosition(void){
+
+	return (uint32_t)(((uint64_t)stepCount * degreeInOneStepX1000 + 500) / 1000);
 }
 //**********************************************************
 //Управление моментом удержания ШД.
 void MOTOR_TorqueControl(uint32_t state){
 
+	torqueState = state;
 	if(state == MOTOR_TORQUE_ON) DRV_EN_Low();  //Вкл. драйвера.
 	else				   		 DRV_EN_High(); //Откл. драйвера.
 }
@@ -212,129 +222,6 @@ void MOTOR_Enable(void){
 	TIMx_Enable(TIM1);
 	DRV_EN_Low();	  //Включение драйвера.
 }
-////*******************************************************************************************
-////*******************************************************************************************
-//static uint32_t _motor_CalcARR(uint32_t sps){
-//
-//	return (MOTOR_FREQ_TIM_Hz + sps/2) / sps;// делениа на 2 для правильного округления при целочисленном делении
-//}
-////**********************************************************
-/////*
-//// * расчет время в мс на выход до стационарного режима
-//// */
-////uint32_t MOTOR_CalcAccelMaxToAccelTime(uint32_t Vmax_rpm, uint32_t Accel){
-////
-////	//время в мс на выход до стационарного режима
-////	 return (uint32_t)((float)(Vmax_rpm / Accel) * 1000);
-////}
-////**********************************************************
-//void MOTOR_CalcAccelDecel(uint32_t Vstart_rpm, uint32_t Vmax_rpm, uint32_t timeAccel_ms){
-//
-//	uint32_t rpmToSpsCoefficient = (MOTOR_FULL_STEPS_PER_TURN * microSteps + 30) / 60;//+30 для правильного округления при целочисленном делении.
-//	//-------------------
-//	//Расчет шагов в секунду (sps) для заданной в RPM скорости.
-//	spsVstart = Vstart_rpm * rpmToSpsCoefficient;
-//	spsVmax   = Vmax_rpm   * rpmToSpsCoefficient;
-//	//Находим количество квантов времени за время разгона.
-//	quantsNum = timeAccel_ms / MOTOR_QUANT_TIME_mS;
-//	//Находим приращение pps которое нужно сделать на каждом кванте времени разгона/торможения.
-//	sps_step  = (spsVmax - spsVstart) / quantsNum;
-//	//Уточнение количества квантов
-//	quantsNum = (spsVmax - spsVstart) / sps_step;
-//
-////	//Начальное значение загружаемое в регистр ARR для скорости Vstart
-////	if(Vstart_rpm == 0) arrV0 = 0;
-////	else 				arrV0 = _motor_CalcARR(spsVstart);
-////	//Запуск таймера
-////	TIM2->ARR   = (uint16_t)arrV0;
-////	TIM2->CCR1  = (uint16_t)(TIM2->ARR / 2);
-////	TIM2->CR1  |= TIM_CR1_CEN;
-//
-//
-//
-////	arrV0     = 100000U / ppsV0;
-////	arrVmax   = 100000U / ppsVmax;
-////	quantsNum = (tAccel * 1000) / MOTOR_QUANT_TIME;
-////	arr_step  = (arrV0 - arrVmax) / quantsNum;
-////	//Если arr_step=0 значит за заданное время tAccel не получится дойти от V0 до Vmax
-////	//Раньше наступит время торможения.
-////	if(arr_step == 0) return ;
-////	quantsNum = (arrV0 - arrVmax) / arr_step;//точный расчет нужного количества квантов.
-//
-////	TIM2->ARR   = (uint16_t)arrV0;
-////	TIM2->CCR1  = (uint16_t)(TIM2->ARR - 20);
-////	TIM2->CR1  |= TIM_CR1_CEN;
-//
-////	motorState = MOTOR_CALC_OK;
-//}
-////**********************************************************
-//void MOTOR_SpinStart(MotorState_t spinMode){
-//
-//	motorState  = spinMode;
-//	//DRV_RESET_High();
-//	DRV_EN_Low();			  //включение драйвера.
-//	TIM2->CR1 |= TIM_CR1_CEN; //включение таймера
-//}
-////**********************************************************
-//void MOTOR_AccelDecelLoop(void){
-//
-//	static uint32_t msCount = 0;
-//		   uint32_t tempARR = 0;
-//	//-------------------
-//	if(motorState == MOTOR_READY)return;//Если расчеты не готовы то ничего не делаем и выходим.
-//	if(++msCount >= MOTOR_QUANT_TIME_mS)//Отсчитываем нужный квант времени.
-//	{
-//		//LED_ACT_Toggel();
-//		msCount = 0;
-//		//Считаем кванты времени и расчитываем скорость.
-//		if(quantsCount < quantsNum)
-//		{
-//			quantsCount++;
-//
-//			switch(motorState){
-//				//----------
-//				//положительное приращение скорости(ускорение) на данном кванте времени
-//				case(MOTOR_ACCEL):
-//					spsVstart = spsVstart + sps_step; //положительное приращение скорости(ускорение)
-//					//if(quantsCount == quantsNum) spsVstart = spsVmax;//Загрузка spsVmax на последнем кванте.
-//					if(spsVstart > spsVmax) spsVstart = spsVmax;//проверка на максимум.
-//					tempARR   = _motor_CalcARR(spsVstart);//расчет значения для таймера
-//				break;
-//				//----------
-//				//отрицательное приращение скорости(замедление) на данном кванте времени
-//				case(MOTOR_DECEL):
-//					spsVstart = spsVstart - sps_step;//отрицательное приращение скорости(замедление)
-//					if(spsVstart <= 0) tempARR = 0;	 //Проверка на минимум
-//					else               tempARR = _motor_CalcARR(spsVstart);//расчет значения для таймера
-//				break;
-//				//----------
-//				default:
-//					tempARR = 0;
-//					motorState = MOTOR_READY;
-//				break;
-//				//----------
-//			}
-//			//Обновляем значение таймера.
-//			if(tempARR != 0)
-//			{
-//				TIM2->ARR  = (uint16_t)tempARR;
-//				TIM2->CCR1 = (uint16_t)(TIM2->ARR / 2);
-//			}
-//			else
-//			{
-//				TIM2->ARR  = 1;//The counter is blocked while the auto-reload value is null.
-//				TIM2->CCR1 = 0;
-//				//DRV_RESET_Low();
-//				DRV_EN_High();
-//			}
-//		}
-//		else
-//		{
-//			motorState  = MOTOR_READY;
-//			quantsCount = 0;
-//		}
-//	}
-//}
 //*******************************************************************************************
 //*******************************************************************************************
 //*******************************************************************************************
@@ -345,8 +232,6 @@ void MOTOR_Enable(void){
 //https://embeddeddesign.org/stepper-motor-controller/ - вариант реализации
 
 //SpeedRampData_t srd;
-
-
 
 static float fastsqrt(float val){
 
@@ -450,10 +335,11 @@ void MOTOR_SpeedCntrMove(int32_t step, uint32_t accel, uint32_t decel, uint32_t 
 		speedRamp.accel_count = 0;
 		//----------------------
 		//Включение таймера и драйвера мотора.
-		//DRV_EN_Low(); 	 		 //включение драйвера.
 		//DRV_RESET_Low();//сбрасывать внутренние таблицы драйвера не нужно!!!! Так точнее работает!!
 		//DRV_RESET_High();
+		DRV_EN_Low();  			 //Вкл. драйвера.
 		TIM1->CR1 |= TIM_CR1_CEN;//CEN: Counter enable
+		stepCount  = 0;
 	}
 	//----------------------
 }
@@ -470,32 +356,35 @@ void MOTOR_SetSpeedRampState(MotorState_t state){
 //**********************************************************
 void MOTOR_TimerITHandler(void){
 
-		   volatile uint32_t new_step_delay;   // Holds next delay period.
-	static volatile  int32_t last_accel_delay; // Remember the last step delay used when accelrating.
-	static volatile uint32_t rest = 0;   	   // Keep track of remainder from new_step-delay calculation to incrase accurancy
+		   volatile uint32_t new_step_delay;   	   // Holds next delay period.
+	static volatile  int32_t last_accel_delay = 0; // Remember the last step delay used when accelrating.
+	static volatile uint32_t rest = 0;   	   	   // Keep track of remainder from new_step-delay calculation to incrase accurancy
 	//----------------------
-	TIM1->ARR = (uint16_t)speedRamp.step_delay;//Обновляем значение таймера.						 //
-	//------------------------------------------------------------
+	//Обновляем значение таймера.
+	TIM1->ARR = (uint16_t)speedRamp.step_delay;
 	//Машина состояний рампы разгона/торможения мотора.
 	switch(speedRamp.run_state){
 		//-------------------
 		case STOP:
-			last_accel_delay = 0;
-			rest       		 = 0;
-			stepCount 		 = 0;
-			TIM1->CR1 &= ~TIM_CR1_CEN; //Откл. таймера.
-
-			//MOTOR_TorqueControl(MOTOR_TORQUE_OFF);//Откл. драйвера мотора.
+			TIM1->CR1 &= ~TIM_CR1_CEN; 						  //Откл. таймера.
+			if(torqueState == MOTOR_TORQUE_OFF) DRV_EN_High();//Откл. драйвера мотора.
 			//сбрасывать внутренние таблицы драйвера не нужно!!!! Так точнее работает!!
 			//DRV_RESET_Low();
+
+			stepCount++;//прибавим последний шаг.
+			//Сброс рабочих переменных.
+			last_accel_delay = 0;
+			rest       		 = 0;
+			//stepCount 		 = 0;
 		break;
 		//-------------------
 		case ACCEL:
-			DRV_STEP_High();
+			DRV_STEP_High(); //делаем шаг.
 
 			stepCount++;
 			speedRamp.accel_count++;
 
+			//Расчет времени до следующего шага.
 			new_step_delay = speedRamp.step_delay - (((2 * (long)speedRamp.step_delay) + rest)/(4 * speedRamp.accel_count + 1));
 			rest           = ((2 * (long)speedRamp.step_delay)+rest)%(4 * speedRamp.accel_count + 1);
 
@@ -559,25 +448,20 @@ void MOTOR_StartRotate(void){
 //	uint32_t reducerRate    = MOTOR_GetReducerRate();     //6;     //передаточное число редуктора = 6.
 //	int32_t  angle		    = MOTOR_GetPosition();        //360*2; //Угол на который нужно переместить вал камеры в градусах.
 
+	//Константы для расчета
+	const float radSecSec = _2PI / 3600 * 100;	//рад в секунду за секунд, in 0.01*rad/sec^2. 3600 - это 60 секунд в квадрате.
+	const float radSec    = _2PI / 60   * 100;	//рад в сек, in 0.01*rad/sec.
+
 	//uint32_t accel_RPMM  = 4000; //Ускорение оборотов в минуту за минуту
 	//Вариант расчета значений когда ускорение задается как время ускорения в мС.
-	uint32_t accel_RPMM = (uint32_t)(targetVelocity / ((float)accelTime / 1000 / 60.0));
-	//-----------------------------------------------------
-	//Пример расчета:
-	//Макс.скорость - 10 RPM,   это = 10*2*Pi = 62.8319 рад/мин, или 1,0472 рад/сек.   1,0472/ 0,01 = 104,72 ~ 105 (in 0.01*rad/sec).
-	//Ускорение     - 20 RPM^2, это = 20*2*Pi = 125.6637 рад/мин^2, или 0,035 рад/сек^2. 0,035 / 0,01 = 3,49   ~ 3	 (in 0.01*rad/sec^2).
-	//Замедление    - 20 RPM^2, расчет тотже что и при ускорении.
-	//Шаги - мне нужно повернуться на 360 градусов. Это 6400 шагов при microstep = 1/32
+	uint32_t accel_RPMM   = (uint32_t)(targetVelocity / ((float)accelTime / 1000 / 60.0));
 
-	// param step   Number of steps to move (pos - CW, neg - CCW).
-	// param accel  Accelration to use, in 0.01*rad/sec^2.
-	// param decel  Decelration to use, in 0.01*rad/sec^2.
-	// param speed  Max speed, in 0.01*rad/sec.
-
-	uint32_t stepsInOneDegreeX1000 = (reducerRate * microStepsPerTurn * 1000) / 360;//кол-во шагов в одном градусе *1000. Умножение на 1000 нужно для увеличения точности расчетов.
-	int32_t  steps = (int32_t) (targetAngle * stepsInOneDegreeX1000) / 1000;		//кол-во шагов необходимое для перемещение на угол angle
-	uint32_t accel = (uint32_t)(accel_RPMM     * reducerRate * _2PI / 3600 * 100);	//Ускорение рад в секунду за секунд
-	uint32_t speed = (uint32_t)(targetVelocity * reducerRate * _2PI / 60   * 100);	//скорость рад в сек
+	uint32_t microSteps   = microStepsPerTurn * reducerRate;				 //кол-во микрошагов с учетом передаточного числа редуктора.
+	degreeInOneStepX1000  = (360 * 1000000 + microSteps/2) / microSteps;	 //кол-во градусов в одном шаге *1000. Умножение на 1000 нужно для увеличения точности расчетов.
+	stepsInOneDegreeX1000 = (microSteps * 1000) / 360;						 //кол-во шагов в одном градусе *1000. Умножение на 1000 нужно для увеличения точности расчетов.
+	int32_t  steps = (int32_t) (targetAngle * stepsInOneDegreeX1000) / 1000; //кол-во шагов необходимое для перемещение на угол angle
+	uint32_t accel = (uint32_t)(accel_RPMM     * reducerRate * radSecSec);   //Ускорение рад в секунду за секунд
+	uint32_t speed = (uint32_t)(targetVelocity * reducerRate * radSec);		 //скорость рад в сек
 
 	//MOTOR_TorqueControl(MOTOR_TORQUE_ON);  //вкл. момента.
 	MOTOR_SpeedCntrMove(steps, 	//param step   Number of steps to move

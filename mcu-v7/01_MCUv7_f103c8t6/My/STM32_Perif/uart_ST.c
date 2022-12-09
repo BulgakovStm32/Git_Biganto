@@ -19,7 +19,7 @@ static void _usart_GpioInit(USART_TypeDef *usart){
 		//PA9(U1TX), PA10(U1RX).
 		RCC->APB2ENR |= RCC_APB2ENR_IOPAEN;
 		GPIOA->CRH &= ~(GPIO_CRH_CNF9 | GPIO_CRH_CNF10);
-		GPIOA->CRH |=   GPIO_CRH_CNF9_1 | GPIO_CRH_MODE9 | //PA9(U1TX)  - выход, альтернативный режим push-pull.																							 //PA9(U1TX) - тактирование 50МГц.
+		GPIOA->CRH |=   GPIO_CRH_CNF9_1 | GPIO_CRH_MODE9 | //PA9(U1TX)  - выход, альтернативный режим push-pull.
 					    GPIO_CRH_CNF10_0;				   //PA10(U1RX) - Floating input.
 	}
 	else if(usart == USART2)
@@ -27,7 +27,7 @@ static void _usart_GpioInit(USART_TypeDef *usart){
 		//PA2(U2TX), PA3(U2RX).
 		RCC->APB2ENR |= RCC_APB2ENR_IOPAEN;
 		GPIOA->CRL &= ~(GPIO_CRL_CNF2 | GPIO_CRL_CNF3);
-		GPIOA->CRL |=   GPIO_CRL_CNF2_1 | GPIO_CRL_MODE2 | //PA2(U2TX) - выход, альтернативный режим push-pull.																							 //PA9(U1TX) - тактирование 50МГц.
+		GPIOA->CRL |=   GPIO_CRL_CNF2_1 | GPIO_CRL_MODE2 | //PA2(U2TX) - выход, альтернативный режим push-pull.
 				  	    GPIO_CRL_CNF3_0;				   //PA3(U2RX) - Floating input.
 	}
 	else if(usart == USART3)
@@ -35,7 +35,7 @@ static void _usart_GpioInit(USART_TypeDef *usart){
 		//PB10(U3TX), PB11(U3RX).
 		RCC->APB2ENR |= RCC_APB2ENR_IOPBEN;
 		GPIOB->CRH &= ~(GPIO_CRH_CNF10 | GPIO_CRH_CNF11);
-		GPIOB->CRH |= GPIO_CRH_CNF10_1 | GPIO_CRH_MODE10 | //PB10(U3TX) - выход, альтернативный режим push-pull.																							 //PA9(U1TX) - тактирование 50МГц.
+		GPIOB->CRH |= GPIO_CRH_CNF10_1 | GPIO_CRH_MODE10 | //PB10(U3TX) - выход, альтернативный режим push-pull.
 					  GPIO_CRH_CNF11_0;				       //PB11(U3RX) - Floating input.
 	}
 }

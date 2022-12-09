@@ -43,23 +43,23 @@ void ADC_Loop(void){
 
 }
 //**********************************************************
-//Одно измерение АЦП.
-uint32_t ADC_GetMeas(uint32_t adcChannel){
+//Одно измерение АЦП в мВ.
+uint32_t ADC_GetMeas_mV(uint32_t adcCh){
   
-	ADC1->SQR3 = adcChannel;      	  //загрузить номер канала.
+	ADC1->SQR3 = adcCh;      	 	  //задать номер канала.
 	ADC1->CR2 |= ADC_CR2_SWSTART;     //запуск преобразования в регулярном канале.
 	while(!(ADC1->SR & ADC_SR_EOC)){};//дождаться окончания преобразования
 	//Вычитать значение самокалибровки ненужно, АЦП это делает сам.
-	return (uint32_t)((ADC1->DR * ADC_QUANT) / 4096);
+	return (uint32_t)((ADC1->DR * ADC_QUANT_uV) / 1000);
 	//return ADC1->DR;
 }
 //**********************************************************
-uint16_t ADC_GetRegDR(ADC_TypeDef *adc){
+uint32_t ADC_GetRegDR(ADC_TypeDef *adc){
 
     return adc->DR;
 }
 //**********************************************************
-uint16_t ADC_GetRegJDRx(ADC_TypeDef *adc, uint8_t ch){
+uint32_t ADC_GetRegJDRx(ADC_TypeDef *adc, uint32_t ch){
 
 	if(ch == 1)return adc->JDR1;
 	if(ch == 2)return adc->JDR2;

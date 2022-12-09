@@ -44,7 +44,7 @@ typedef union{
 		uint32_t f_PwrOff :1;		//PWR_OFF (R) - бит текущего состояния выключения питания
 									//0 - остальные режимы работы
 									//1 - пришла команда cmdTurnOffPower,
-		uint32_t dummy :28;
+		uint32_t dummy    :28;
 	}Flags;
 	uint32_t BLK;
 }MCU_SystemCtrlReg_t;
