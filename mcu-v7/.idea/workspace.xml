@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="d9f0e95b-fad4-4283-85bb-5ab95869bb18" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/01_MCUv7_f103c8t6/MCUv7/Encoder.c" beforeDir="false" afterPath="$PROJECT_DIR$/01_MCUv7_f103c8t6/MCUv7/Encoder.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/01_MCUv7_f103c8t6/MCUv7/Encoder.h" beforeDir="false" afterPath="$PROJECT_DIR$/01_MCUv7_f103c8t6/MCUv7/Encoder.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/01_MCUv7_f103c8t6/MCUv7/Motor.c" beforeDir="false" afterPath="$PROJECT_DIR$/01_MCUv7_f103c8t6/MCUv7/Motor.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/01_MCUv7_f103c8t6/MCUv7/Motor.h" beforeDir="false" afterPath="$PROJECT_DIR$/01_MCUv7_f103c8t6/MCUv7/Motor.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/01_MCUv7_f103c8t6/MCUv7/Power.c" beforeDir="false" afterPath="$PROJECT_DIR$/01_MCUv7_f103c8t6/MCUv7/Power.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/01_MCUv7_f103c8t6/MCUv7/Power.h" beforeDir="false" afterPath="$PROJECT_DIR$/01_MCUv7_f103c8t6/MCUv7/Power.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/01_MCUv7_f103c8t6/MCUv7/Protocol_I2C.c" beforeDir="false" afterPath="$PROJECT_DIR$/01_MCUv7_f103c8t6/MCUv7/Protocol_I2C.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/01_MCUv7_f103c8t6/MCUv7/Protocol_I2C.h" beforeDir="false" afterPath="$PROJECT_DIR$/01_MCUv7_f103c8t6/MCUv7/Protocol_I2C.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/01_MCUv7_f103c8t6/MCUv7/cmd.h" beforeDir="false" afterPath="$PROJECT_DIR$/01_MCUv7_f103c8t6/MCUv7/cmd.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/01_MCUv7_f103c8t6/My/Application/Blink.c" beforeDir="false" afterPath="$PROJECT_DIR$/01_MCUv7_f103c8t6/My/Application/Blink.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/01_MCUv7_f103c8t6/My/Application/Blink.h" beforeDir="false" afterPath="$PROJECT_DIR$/01_MCUv7_f103c8t6/My/Application/Blink.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/01_MCUv7_f103c8t6/My/Main/main.c" beforeDir="false" afterPath="$PROJECT_DIR$/01_MCUv7_f103c8t6/My/Main/main.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/01_MCUv7_f103c8t6/My/Main/main.h" beforeDir="false" afterPath="$PROJECT_DIR$/01_MCUv7_f103c8t6/My/Main/main.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/01_MCUv7_f103c8t6/My/STM32_Perif/adc_ST.c" beforeDir="false" afterPath="$PROJECT_DIR$/01_MCUv7_f103c8t6/My/STM32_Perif/adc_ST.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/01_MCUv7_f103c8t6/My/STM32_Perif/adc_ST.h" beforeDir="false" afterPath="$PROJECT_DIR$/01_MCUv7_f103c8t6/My/STM32_Perif/adc_ST.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/01_MCUv7_f103c8t6/My/STM32_Perif/stm32f10x_it.c" beforeDir="false" afterPath="$PROJECT_DIR$/01_MCUv7_f103c8t6/My/STM32_Perif/stm32f10x_it.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/01_MCUv7_f103c8t6/My/STM32_Perif/uart_ST.c" beforeDir="false" afterPath="$PROJECT_DIR$/01_MCUv7_f103c8t6/My/STM32_Perif/uart_ST.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/01_MCUv7_f103c8t6/My/STM32_Perif/uart_ST.h" beforeDir="false" afterPath="$PROJECT_DIR$/01_MCUv7_f103c8t6/My/STM32_Perif/uart_ST.h" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectId" id="2H1ihxkPDKJJe2X84kVRuaiAovr" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">
+    <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
+    <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="d9f0e95b-fad4-4283-85bb-5ab95869bb18" name="Default Changelist" comment="" />
+      <created>1667459116849</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1667459116849</updated>
+    </task>
+    <servers />
+  </component>
+</project>
