@@ -1,5 +1,0 @@
-adc_ST.c:9:6:ADC_Init	0	static
-adc_ST.c:41:6:ADC_Loop	0	static
-adc_ST.c:47:10:ADC_GetMeas	0	static
-adc_ST.c:57:10:ADC_GetRegDR	0	static
-adc_ST.c:62:10:ADC_GetRegJDRx	0	static

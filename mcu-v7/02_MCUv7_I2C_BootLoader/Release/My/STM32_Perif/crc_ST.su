@@ -1,2 +1,0 @@
-crc_ST.c:25:6:CRC_Init	0	static
-crc_ST.c:37:10:CRC_CalcCrc	8	static
