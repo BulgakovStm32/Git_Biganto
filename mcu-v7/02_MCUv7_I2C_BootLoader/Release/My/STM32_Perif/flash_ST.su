@@ -1,0 +1,15 @@
+flash_ST.c:23:17:_flash_Ready	0	static
+flash_ST.c:34:17:_flash_CheckEOP	0	static
+flash_ST.c:52:6:STM32_Flash_Lock	0	static
+flash_ST.c:62:6:STM32_Flash_Unlock	0	static
+flash_ST.c:74:6:STM32_Flash_ErasePage	8	static
+flash_ST.c:97:6:STM32_Flash_WriteWord	8	static
+flash_ST.c:122:6:STM32_Flash_WriteHalfWord	8	static
+flash_ST.c:145:6:STM32_Flash_WriteBuf	16	static
+flash_ST.c:176:10:STM32_Flash_ReadWord	0	static
+flash_ST.c:188:6:STM32_Flash_ReadBufU8	0	static
+flash_ST.c:207:6:STM32_Flash_ReadBufU32	0	static
+flash_ST.c:225:10:STM32_Flash_GetReadOutProtectionStatus	0	static
+flash_ST.c:237:15:STM32_Flash_ReadOutProtection	8	static
+flash_ST.c:271:10:STM32_Flash_GetWriteProtectionOptionByte	0	static
+flash_ST.c:282:15:STM32_Flash_EnableWriteProtection	0	static

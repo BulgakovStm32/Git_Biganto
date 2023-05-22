@@ -1,0 +1,10 @@
+gpio_ST.c:11:17:_gpio_PortXClockEnable	0	static
+gpio_ST.c:22:6:GPIO_InitForOutputPushPull	8	static
+gpio_ST.c:41:6:GPIO_InitForOutputOpenDrain	16	static
+gpio_ST.c:62:6:GPIO_InitForInputPullUp	8	static
+gpio_ST.c:86:6:GPIO_InitForInputPullDown	8	static
+gpio_ST.c:110:6:GPIO_InitForFloatingInput	8	static
+gpio_ST.c:134:6:GPIO_Init	0	static
+gpio_ST.c:160:6:GPIO_CheckLoop	12	static
+gpio_ST.c:200:10:GPIO_GetPortState	0	static
+gpio_ST.c:208:10:GPIO_GetPinState	0	static
